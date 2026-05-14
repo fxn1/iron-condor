@@ -1,0 +1,142 @@
+C:\Neeraj\backup\tech\systematicinv\backtrader\PycharmProjects\venv\Scripts\python.exe C:\Neeraj\backup\tech\systematicinv\iron-condor\Options_Using_SPX_10_NetDelta_Fixed4.PY
+
+================================================================================
+SPX IRON CONDOR - 10 YEAR BACKTEST  (NET-DELTA + FIXED *5 CAPITAL)
+Options_Using_SPX_10_NetDelta_Fixed4.PY
+================================================================================
+
+  Underlying:    SPX (real 1-min data, resampled to daily)
+  Strategy:      18/14 delta IC, $50 wings, Monday entry, 30 DTE
+  Roll rule:     |net delta| > 15  (warn at +/-10)
+  Capital:       fixed assumption of 5 concurrent trades
+
+  Loading SPX minute data...
+  loaded spx_2016.xlsx: 98,356 bars -> 252 days
+  loaded spx_2017.xlsx: 97,815 bars -> 251 days
+  loaded spx_2018.xlsx: 97,649 bars -> 251 days
+  loaded spx_2019.xlsx: 98,037 bars -> 252 days
+  loaded spx_2020.xlsx: 98,604 bars -> 253 days
+  loaded spx_2021.xlsx: 98,373 bars -> 252 days
+  loaded spx_2022.xlsx: 97,941 bars -> 251 days
+  loaded spx_2023.xlsx: 97,432 bars -> 250 days
+  loaded spx_2024.xlsx: 97,976 bars -> 252 days
+  loaded spx_2025.xlsx: 97,273 bars -> 250 days
+  loaded spx_2026.xlsx: 7,429 bars -> 19 days
+  TOTAL: 986,885 minute bars / 2533 trading days
+  Built 2533 daily SPX bars
+  VIX data not found, defaulting VIX=18
+
+
+================================================================================
+RUNNING 10-YEAR SPX BACKTEST  (NET-DELTA + FIXED *5 CAPITAL)
+================================================================================
+
+  Period:       2016-05-09 to 2026-05-08
+  Strategy:     18/14 Delta Iron Condor on SPX  (wing $50)
+  Roll rule:    |net delta| > 15  (warn at +/-10)
+  Capital:      fixed assumption of 5 concurrent trades
+  Exits:        50% profit, 10 DTE smart exit, 2x stop  (gap-aware)
+
+  Running backtest...
+  Complete!
+
+
+================================================================================
+10-YEAR SPX BACKTEST RESULTS  (NET-DELTA + FIXED *5 CAPITAL)
+================================================================================
+
+  STRATEGY
+  ------------------------------------------------------------
+    Underlying:        SPX
+    PUT/CALL Delta:    18 / 14
+    Wing Width:        $50
+    Roll Threshold:    |net delta| > 15
+    Profit Target:     50%
+    Stop Loss:         2x credit per leg (worst-intraday)
+    10 DTE Exit:       Smart exit, gap-aware
+    VIX No-Trade:      > 25
+    Capital Sizing:    fixed 5 concurrent
+
+  TRADE STATISTICS
+  ------------------------------------------------------------
+    Total Trades:           488
+    Monday Entries:         319
+    Re-entry Trades:        169
+    Skipped (VIX > 25):     0
+    Winning Trades:         329
+    Losing Trades:          159
+    Win Rate:               67.4%
+
+  NET-DELTA MANAGEMENT
+  ------------------------------------------------------------
+    Days in Warn band (10-15):     245
+    Days in Roll zone (>15):       85
+    Trades that rolled at least 1x:    46
+    Total PUT-side rolls:              35
+    Total CALL-side rolls:             41
+
+  EXIT REASONS
+  ------------------------------------------------------------
+    50% Profit Target                    304 ( 62.3%)
+    10 DTE Exit (Cut Loss)                89 ( 18.2%)
+    Expiration                            57 ( 11.7%)
+    10 DTE Exit (Profitable)              24 (  4.9%)
+    Both legs stopped out                 14 (  2.9%)
+
+  PROFIT & LOSS
+  ------------------------------------------------------------
+    Total P&L:              $38,012.90
+    Gross Profit:           $229,135.57
+    Gross Loss:             $-191,122.67
+    Profit Factor:          1.20
+    Avg Win:                $696.46
+    Avg Loss:               $-1,202.03
+    Max Drawdown:           $19,506.31
+
+  CAPITAL ANALYSIS
+  ------------------------------------------------------------
+    Avg Credit/Trade:       $12.59 (incl. rolls)
+    Margin per Contract:    $3,741.06
+    Concurrent Trades:      5  (fixed - matches observed peak)
+    Peak Observed:          5  (informational)
+    Total Capital Required: $18,705.30
+    Annual P&L:             $3,802.85
+    Annual ROC:             20.3%
+    Total Return (10 yrs):    203.2%
+
+  YEARLY BREAKDOWN
+  ------------------------------------------------------------
+    Year   Trades   Wins   Win%     Rolls    P&L            ROC
+    ------ -------- ------ -------- -------- -------------- ----------
+    2016   33       27     81.8   % 12       $   6,210.64     33.2%
+    2017   47       30     63.8   % 31       $     651.07      3.5%
+    2018   51       30     58.8   % 8        $  -6,429.65    -34.4%
+    2019   52       38     73.1   % 17       $   3,425.52     18.3%
+    2020   49       35     71.4   % 1        $   2,562.40     13.7%
+    2021   51       30     58.8   % 4        $    -119.95     -0.6%
+    2022   49       32     65.3   % 0        $   5,115.99     27.4%
+    2023   49       33     67.3   % 3        $   8,633.04     46.2%
+    2024   52       30     57.7   % 0        $    -910.18     -4.9%
+    2025   51       41     80.4   % 0        $  17,147.36     91.7%
+    2026   4        3      75.0   % 0        $   1,726.65      9.2%
+
+  Trades exported to: C:\Neeraj\backup\tech\systematicinv\iron-condor\SPX_IronCondor_10Year_NetDelta_Fixed4_Backtest.csv
+
+================================================================================
+FINAL SUMMARY - 10 YEAR SPX BACKTEST  (NET-DELTA + FIXED *5 CAPITAL)
+================================================================================
+
+  +------------------------------------------------------------+
+  |      CAPITAL INVESTED:                  $18,705            |
+  |     (fixed 5 concurrent)              peak obs: 5          |
+  |    TOTAL P&L (10 years):                $38,013            |
+  |        TOTAL RETURN:                      203%             |
+  |         ANNUAL P&L:                      $3,803            |
+  |         ANNUAL ROC:                      20.3%             |
+  |          WIN RATE:                       67.4%             |
+  |        PROFIT FACTOR:                     1.20             |
+  |   TOTAL ROLLS (PUT/CALL):                35/41             |
+  +------------------------------------------------------------+
+
+
+Process finished with exit code 0
