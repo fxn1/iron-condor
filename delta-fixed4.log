@@ -24,7 +24,7 @@ Options_Using_SPX_10_NetDelta_Fixed4.PY
   loaded spx_2026.xlsx: 7,429 bars -> 19 days
   TOTAL: 986,885 minute bars / 2533 trading days
   Built 2533 daily SPX bars
-  VIX data not found, defaulting VIX=18
+  Loaded 2602 days of VIX data
 
 
 ================================================================================
@@ -59,65 +59,65 @@ RUNNING 10-YEAR SPX BACKTEST  (NET-DELTA + FIXED *5 CAPITAL)
 
   TRADE STATISTICS
   ------------------------------------------------------------
-    Total Trades:           488
-    Monday Entries:         319
-    Re-entry Trades:        169
-    Skipped (VIX > 25):     0
-    Winning Trades:         329
-    Losing Trades:          159
-    Win Rate:               67.4%
+    Total Trades:           417
+    Monday Entries:         273
+    Re-entry Trades:        144
+    Skipped (VIX > 25):     70
+    Winning Trades:         283
+    Losing Trades:          134
+    Win Rate:               67.9%
 
   NET-DELTA MANAGEMENT
   ------------------------------------------------------------
     Days in Warn band (10-15):     245
-    Days in Roll zone (>15):       85
-    Trades that rolled at least 1x:    46
+    Days in Roll zone (>15):       86
+    Trades that rolled at least 1x:    47
     Total PUT-side rolls:              35
-    Total CALL-side rolls:             41
+    Total CALL-side rolls:             42
 
   EXIT REASONS
   ------------------------------------------------------------
-    50% Profit Target                    304 ( 62.3%)
-    10 DTE Exit (Cut Loss)                89 ( 18.2%)
-    Expiration                            57 ( 11.7%)
-    10 DTE Exit (Profitable)              24 (  4.9%)
-    Both legs stopped out                 14 (  2.9%)
+    50% Profit Target                    258 ( 61.9%)
+    10 DTE Exit (Cut Loss)                78 ( 18.7%)
+    Expiration                            46 ( 11.0%)
+    10 DTE Exit (Profitable)              24 (  5.8%)
+    Both legs stopped out                 11 (  2.6%)
 
   PROFIT & LOSS
   ------------------------------------------------------------
-    Total P&L:              $38,012.90
-    Gross Profit:           $229,135.57
-    Gross Loss:             $-191,122.67
-    Profit Factor:          1.20
-    Avg Win:                $696.46
-    Avg Loss:               $-1,202.03
-    Max Drawdown:           $19,506.31
+    Total P&L:              $36,711.99
+    Gross Profit:           $191,877.83
+    Gross Loss:             $-155,165.84
+    Profit Factor:          1.24
+    Avg Win:                $678.01
+    Avg Loss:               $-1,157.95
+    Max Drawdown:           $13,832.35
 
   CAPITAL ANALYSIS
   ------------------------------------------------------------
-    Avg Credit/Trade:       $12.59 (incl. rolls)
-    Margin per Contract:    $3,741.06
+    Avg Credit/Trade:       $12.30 (incl. rolls)
+    Margin per Contract:    $3,769.55
     Concurrent Trades:      5  (fixed - matches observed peak)
     Peak Observed:          5  (informational)
-    Total Capital Required: $18,705.30
-    Annual P&L:             $3,802.85
-    Annual ROC:             20.3%
-    Total Return (10 yrs):    203.2%
+    Total Capital Required: $18,847.75
+    Annual P&L:             $3,672.71
+    Annual ROC:             19.5%
+    Total Return (10 yrs):    194.8%
 
   YEARLY BREAKDOWN
   ------------------------------------------------------------
     Year   Trades   Wins   Win%     Rolls    P&L            ROC
     ------ -------- ------ -------- -------- -------------- ----------
-    2016   33       27     81.8   % 12       $   6,210.64     33.2%
+    2016   33       27     81.8   % 12       $   6,210.64     33.0%
     2017   47       30     63.8   % 31       $     651.07      3.5%
-    2018   51       30     58.8   % 8        $  -6,429.65    -34.4%
-    2019   52       38     73.1   % 17       $   3,425.52     18.3%
-    2020   49       35     71.4   % 1        $   2,562.40     13.7%
-    2021   51       30     58.8   % 4        $    -119.95     -0.6%
-    2022   49       32     65.3   % 0        $   5,115.99     27.4%
-    2023   49       33     67.3   % 3        $   8,633.04     46.2%
-    2024   52       30     57.7   % 0        $    -910.18     -4.9%
-    2025   51       41     80.4   % 0        $  17,147.36     91.7%
+    2018   48       28     58.3   % 8        $  -6,785.40    -36.0%
+    2019   53       39     73.6   % 17       $   5,063.63     26.9%
+    2020   18       12     66.7   % 2        $      94.71      0.5%
+    2021   46       30     65.2   % 4        $   3,225.33     17.1%
+    2022   23       14     60.9   % 0        $   1,118.30      5.9%
+    2023   48       33     68.8   % 3        $   9,002.81     47.8%
+    2024   51       30     58.8   % 0        $    -141.95     -0.8%
+    2025   46       37     80.4   % 0        $  16,546.20     87.8%
     2026   4        3      75.0   % 0        $   1,726.65      9.2%
 
   Trades exported to: C:\Neeraj\backup\tech\systematicinv\iron-condor\SPX_IronCondor_10Year_NetDelta_Fixed4_Backtest.csv
@@ -127,15 +127,15 @@ FINAL SUMMARY - 10 YEAR SPX BACKTEST  (NET-DELTA + FIXED *5 CAPITAL)
 ================================================================================
 
   +------------------------------------------------------------+
-  |      CAPITAL INVESTED:                  $18,705            |
+  |      CAPITAL INVESTED:                  $18,848            |
   |     (fixed 5 concurrent)              peak obs: 5          |
-  |    TOTAL P&L (10 years):                $38,013            |
-  |        TOTAL RETURN:                      203%             |
-  |         ANNUAL P&L:                      $3,803            |
-  |         ANNUAL ROC:                      20.3%             |
-  |          WIN RATE:                       67.4%             |
-  |        PROFIT FACTOR:                     1.20             |
-  |   TOTAL ROLLS (PUT/CALL):                35/41             |
+  |    TOTAL P&L (10 years):                $36,712            |
+  |        TOTAL RETURN:                      195%             |
+  |         ANNUAL P&L:                      $3,673            |
+  |         ANNUAL ROC:                      19.5%             |
+  |          WIN RATE:                       67.9%             |
+  |        PROFIT FACTOR:                     1.24             |
+  |   TOTAL ROLLS (PUT/CALL):                35/42             |
   +------------------------------------------------------------+
 
 

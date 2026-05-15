@@ -2,37 +2,6 @@
 """
 ================================================================================
 SPX IRON CONDOR - 10 YEAR BACKTEST
-WITH NET-DELTA ROLL MANAGEMENT
-CAPITAL SIZING: FIXED * 5 CONCURRENT (matches observed peak)
-================================================================================
-
-This is a sibling of Options_Using_SPX_10_NetDelta.PY with ONE change:
-capital sizing uses a fixed multiplier instead of the observed peak.
-
-History of this multiplier:
-  1. Original code:  * 4   (reviewer-preferred fixed assumption)
-  2. After tracking: peak observed was 5, not 4 -> using 4 understates
-     capital ~20% and overstates ROC ~25%.
-  3. Current:        * 5   (fixed, matches observed peak so capital is
-                            sized for the true worst case the strategy
-                            actually demanded)
-
-Keeping the multiplier fixed (rather than data-driven) preserves
-comparability across runs - the capital figure won't shift just because
-one run happens to hit a busier peak day.
-
-The peak number actually observed each run is still tracked and printed
-in the CAPITAL ANALYSIS block so you can verify the * 5 assumption still
-holds for the latest run.
-
-Everything else is identical to Options_Using_SPX_10_NetDelta.PY:
-    * Net-delta rolls when |net delta| > 15
-    * Gap-aware stops (actual gap price) and profit targets (best intraday)
-    * Same-day stop-wins-over-profit-target rule
-    * 18/14 delta entry, $50 wings, Monday entry, 30 DTE
-    * 50% profit target, 10 DTE smart exit, 2x stop loss
-    * VIX > 25 skip entry, VIX > 30 close puts
-    * Max 3 rolls per side per trade
 
 Inputs:
     * Real SPX 1-min data: spx_2016.xlsx ... spx_2026.xlsx
@@ -55,7 +24,8 @@ from config import *
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 VIX_DATA_PATH = os.path.normpath(
-    os.path.join(SCRIPT_DIR, '..', '..', 'SPY-DELTA', 'VIX_Daily_Data.xlsx')
+    os.path.join(SCRIPT_DIR, 'VIX_Daily_Data.xlsx')
+    # os.path.join(SCRIPT_DIR, '..', '..', 'SPY-DELTA', 'VIX_Daily_Data.xlsx')
 )
 OUTPUT_PATH = SCRIPT_DIR
 
@@ -280,22 +250,22 @@ def main():
     print(f"  Capital:       fixed assumption of {CONCURRENT_TRADES} concurrent trades")
     print()
 
-    print("  Loading SPX minute data...")
-    spx_data = load_spx_daily_from_minute_files(START_YEAR, END_YEAR)
-    if spx_data is None:
-        print("  ERROR: could not load SPX data")
-        return
-    print(f"  Built {len(spx_data)} daily SPX bars")
-
     vix_data = None
     if os.path.exists(VIX_DATA_PATH):
         vix_data = load_vix_data_from_excel(VIX_DATA_PATH)
         if vix_data:
             print(f"  Loaded {len(vix_data)} days of VIX data")
     if vix_data is None:
-        print("  VIX data not found, defaulting VIX=18")
-        vix_data = {d: {'close': 18.0} for d in spx_data.keys()}
+        print("  ERROR: VIX data not found")
+        return
     print()
+
+    print("  Loading SPX minute data...")
+    spx_data = load_spx_daily_from_minute_files(START_YEAR, END_YEAR)
+    if spx_data is None:
+        print("  ERROR: could not load SPX data")
+        return
+    print(f"  Built {len(spx_data)} daily SPX bars")
 
     years = (END_DATE - START_DATE).days / 365.25
     results = run_backtest(spx_data, vix_data, START_DATE, END_DATE)

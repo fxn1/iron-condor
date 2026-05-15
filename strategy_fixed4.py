@@ -1,3 +1,36 @@
+"""
+WITH NET-DELTA ROLL MANAGEMENT
+CAPITAL SIZING: FIXED * 5 CONCURRENT (matches observed peak)
+================================================================================
+
+This is a sibling of Options_Using_SPX_10_NetDelta.PY with ONE change:
+capital sizing uses a fixed multiplier instead of the observed peak.
+
+History of this multiplier:
+  1. Original code:  * 4   (reviewer-preferred fixed assumption)
+  2. After tracking: peak observed was 5, not 4 -> using 4 understates
+     capital ~20% and overstates ROC ~25%.
+  3. Current:        * 5   (fixed, matches observed peak so capital is
+                            sized for the true worst case the strategy
+                            actually demanded)
+
+Keeping the multiplier fixed (rather than data-driven) preserves
+comparability across runs - the capital figure won't shift just because
+one run happens to hit a busier peak day.
+
+The peak number actually observed each run is still tracked and printed
+in the CAPITAL ANALYSIS block so you can verify the * 5 assumption still
+holds for the latest run.
+
+Everything else is identical to Options_Using_SPX_10_NetDelta.PY:
+    * Net-delta rolls when |net delta| > 15
+    * Gap-aware stops (actual gap price) and profit targets (best intraday)
+    * Same-day stop-wins-over-profit-target rule
+    * 18/14 delta entry, $50 wings, Monday entry, 30 DTE
+    * 50% profit target, 10 DTE smart exit, 2x stop loss
+    * VIX > 25 skip entry, VIX > 30 close puts
+    * Max 3 rolls per side per trade
+"""
 from datetime import timedelta
 from enum import Enum
 
