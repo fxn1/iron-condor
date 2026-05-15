@@ -59,69 +59,16 @@ VIX_DATA_PATH = os.path.normpath(
 )
 OUTPUT_PATH = SCRIPT_DIR
 
-from pricing import black_scholes_price
-from pricing import find_strike_for_delta
-
-from data_loader import load_spx_daily_from_minute_files
-from data_loader import load_vix_data_from_excel
+from data_loader import load_spx_daily_from_minute_files, load_vix_data_from_excel
 
 from volatility import calculate_historical_volatility
 
-# ============================================================================
-# DATE HELPERS
-# ============================================================================
-
-def get_next_friday(from_date, days_out=30):
-    target = from_date + timedelta(days=days_out)
-    days_to_friday = (4 - target.weekday()) % 7
-    if days_to_friday == 0 and target.weekday() != 4:
-        days_to_friday = 7
-    friday = target + timedelta(days=days_to_friday)
-    if friday <= from_date:
-        friday += timedelta(days=7)
-    return friday
-
-
-def is_monday(d): return d.weekday() == 0
-
 from trade import IronCondorTrade
 
-# ============================================================================
-# TRADE CREATION
-# ============================================================================
+from strategy_fixed4 import get_next_friday, create_new_trade, TradeEntryReason
+from strategy_fixed4 import Fixed4Strategy
 
-def create_new_trade(entry_date, spx_price, vix, volatility, trade_id):
-    expiration = get_next_friday(entry_date, TARGET_DTE)
-    dte = (expiration - entry_date).days
-    T = dte / 365.0
-    put_vol  = volatility * 1.10
-    call_vol = volatility * 0.95
-
-    put_short  = find_strike_for_delta(spx_price, PUT_DELTA,  T, RISK_FREE_RATE, put_vol,  'put')
-    put_long   = put_short - WING_WIDTH
-    call_short = find_strike_for_delta(spx_price, CALL_DELTA, T, RISK_FREE_RATE, call_vol, 'call')
-    call_long  = call_short + WING_WIDTH
-
-    ps = black_scholes_price(spx_price, put_short,  T, RISK_FREE_RATE, put_vol, 'put')
-    pl = black_scholes_price(spx_price, put_long,   T, RISK_FREE_RATE, put_vol, 'put')
-    put_credit  = ps - pl
-
-    cs = black_scholes_price(spx_price, call_short, T, RISK_FREE_RATE, call_vol, 'call')
-    cl = black_scholes_price(spx_price, call_long,  T, RISK_FREE_RATE, call_vol, 'call')
-    call_credit = cs - cl
-
-    return IronCondorTrade(
-        entry_date=entry_date,
-        expiration_date=expiration,
-        spx_price=spx_price,
-        vix=vix,
-        put_short=put_short, put_long=put_long, put_credit=put_credit,
-        call_short=call_short, call_long=call_long, call_credit=call_credit,
-        num_contracts=NUM_CONTRACTS,
-        trade_id=trade_id,
-    )
-
-
+strategy = Fixed4Strategy()
 # ============================================================================
 # BACKTEST ENGINE
 # ============================================================================
@@ -225,7 +172,7 @@ def run_backtest(spx_data, vix_data, start_date, end_date):
 
             open_trades.remove(trade)
             closed_trades.append(trade)
-            if trade.exited_at_profit_target and vix <= VIX_NO_TRADE:
+            if strategy.should_reenter_after_exit(trade, vix):
                 potential_reentries.append(True)
                 profit_target_exits += 1
 
@@ -242,17 +189,17 @@ def run_backtest(spx_data, vix_data, start_date, end_date):
         elif potential_reentries:
             skipped_duplicate_exp += 1
 
-        if is_monday(current_date):
-            if vix > VIX_NO_TRADE:
-                trades_skipped_vix += 1
-            elif exp_key in used_expirations:
-                skipped_duplicate_exp += 1
-            else:
-                trade_id += 1
-                new_trade = create_new_trade(current_date, spx_price, vix, volatility, trade_id)
-                open_trades.append(new_trade)
-                used_expirations.add(exp_key)
-                trades_entered += 1
+        trade_reason = strategy.should_enter_trade(current_date, vix, exp_key, used_expirations)
+        if trade_reason == TradeEntryReason.SHOULD_ENTER:
+            trade_id += 1
+            new_trade = create_new_trade(current_date, spx_price, vix, volatility, trade_id)
+            open_trades.append(new_trade)
+            used_expirations.add(exp_key)
+            trades_entered += 1
+        elif trade_reason == TradeEntryReason.SKIPPED_VIX:
+            trades_skipped_vix += 1
+        elif trade_reason == TradeEntryReason.SKIPPED_DUP_EXP:
+            skipped_duplicate_exp += 1
 
         # Track peak concurrent for INFORMATIONAL output. Capital sizing
         # in this variant uses the fixed CONCURRENT_TRADES constant instead.
