@@ -10,22 +10,22 @@ Options_Using_SPX_10_NetDelta_Fixed4.PY
   Roll rule:     |net delta| > 15  (warn at +/-10)
   Capital:       fixed assumption of 5 concurrent trades
 
+  Loaded 2602 days of VIX data
+
   Loading SPX minute data...
-  loaded spx_2016.xlsx: 98,356 bars -> 252 days
   loaded spx_2017.xlsx: 97,815 bars -> 251 days
+  loaded spx_2016.xlsx: 98,356 bars -> 252 days
   loaded spx_2018.xlsx: 97,649 bars -> 251 days
   loaded spx_2019.xlsx: 98,037 bars -> 252 days
   loaded spx_2020.xlsx: 98,604 bars -> 253 days
   loaded spx_2021.xlsx: 98,373 bars -> 252 days
-  loaded spx_2022.xlsx: 97,941 bars -> 251 days
   loaded spx_2023.xlsx: 97,432 bars -> 250 days
+  loaded spx_2022.xlsx: 97,941 bars -> 251 days
   loaded spx_2024.xlsx: 97,976 bars -> 252 days
-  loaded spx_2025.xlsx: 97,273 bars -> 250 days
   loaded spx_2026.xlsx: 7,429 bars -> 19 days
-  TOTAL: 986,885 minute bars / 2533 trading days
+  loaded spx_2025.xlsx: 97,273 bars -> 250 days
+  TOTAL: 986,885 minute bars / 2533 trading days.  in 34.58s
   Built 2533 daily SPX bars
-  Loaded 2602 days of VIX data
-
 
 ================================================================================
 RUNNING 10-YEAR SPX BACKTEST  (NET-DELTA + FIXED *5 CAPITAL)
