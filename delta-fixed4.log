@@ -22,9 +22,9 @@ Options_Using_SPX_10_NetDelta_Fixed4.PY
   loaded spx_2023.xlsx: 97,432 bars -> 250 days
   loaded spx_2022.xlsx: 97,941 bars -> 251 days
   loaded spx_2024.xlsx: 97,976 bars -> 252 days
-  loaded spx_2026.xlsx: 7,429 bars -> 19 days
   loaded spx_2025.xlsx: 97,273 bars -> 250 days
-  TOTAL: 986,885 minute bars / 2533 trading days.  in 34.58s
+  loaded spx_2026.xlsx: 7,429 bars -> 19 days
+  TOTAL: 986,885 minute bars / 2533 trading days.  in 34.16s
   Built 2533 daily SPX bars
 
 ================================================================================

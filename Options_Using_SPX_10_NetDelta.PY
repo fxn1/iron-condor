@@ -94,6 +94,7 @@ OUTPUT_PATH = SCRIPT_DIR
 
 
 class NetDeltaStrategy(Fixed4Strategy):
+    # TODO: override create_new_trade to return NetDeltaTradeOpen
     pass
 
 

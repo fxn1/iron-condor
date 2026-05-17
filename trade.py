@@ -175,6 +175,16 @@ class IronCondorTrade:
         cl = black_scholes_price(S, self.call_long, T, r, call_vol, 'call')
         return self.call_credit - (cs - cl)
 
+    def _close_leg(self, side, pnl, reason):
+        if side == 'put':
+            self.put_leg_open = False
+            self.put_leg_pnl = pnl
+            self.put_exit_reason = reason
+        else:
+            self.call_leg_open = False
+            self.call_leg_pnl = pnl
+            self.call_exit_reason = reason
+
     def _adjust_open_pnl(self, day_open, T, r, put_vol, call_vol,
                          current_put_pnl, put_pnl_high, put_pnl_low,
                          current_call_pnl, call_pnl_low, call_pnl_high):
@@ -238,31 +248,21 @@ class IronCondorTrade:
             self.is_open = False
             self.exit_date = current_date
             self.exit_reason = "50% Profit Target"
-            self.put_leg_pnl  = put_pnl
-            self.call_leg_pnl = call_pnl
+            self._close_leg('put', put_pnl, "")
+            self._close_leg('call', call_pnl, "")
             self.pnl = self.banked_pnl + self.put_leg_pnl + self.call_leg_pnl
-            self.put_leg_open = False
-            self.call_leg_open = False
             self.spx_price_at_exit = spx_price
             self.exited_at_profit_target = True
             return True
 
         if self.put_leg_open:
             if vix > VIX_EXIT_PUT:
-                self.put_leg_open = False
-                self.put_leg_pnl = current_put_pnl
-                self.put_exit_reason = "VIX Exit"
+                self._close_leg('put', current_put_pnl, "VIX Exit")
             elif put_stop_hit:
-                self.put_leg_open = False
-                # Record at the ACTUAL gap price, not the -2x cap.
-                self.put_leg_pnl = put_pnl_low
-                self.put_exit_reason = "PUT:Stop Loss"
+                self._close_leg('put', put_pnl_low, "PUT:Stop Loss")
 
         if self.call_leg_open and call_stop_hit:
-            self.call_leg_open = False
-            # Record at the ACTUAL gap price (day high for calls), not -2x cap.
-            self.call_leg_pnl = call_pnl_high
-            self.call_exit_reason = "CALL:Stop Loss"
+            self._close_leg('call', call_pnl_high, "CALL:Stop Loss")
 
         # 10 DTE smart exit
         if self.is_open and dte <= EXIT_DTE:
@@ -283,19 +283,15 @@ class IronCondorTrade:
             if take_profit_hit or cut_loss_hit:
                 if take_profit_hit:
                     if self.put_leg_open:
-                        self.put_leg_pnl = best_put2; self.put_leg_open = False
-                        self.put_exit_reason = "10 DTE Exit"
+                        self._close_leg('put', best_put2, "10 DTE Exit")
                     if self.call_leg_open:
-                        self.call_leg_pnl = best_call2; self.call_leg_open = False
-                        self.call_exit_reason = "10 DTE Exit"
+                        self._close_leg('call', best_call2, "10 DTE Exit")
                     self.exit_reason = "10 DTE Exit (Profitable)"
                 else:
                     if self.put_leg_open:
-                        self.put_leg_pnl = worst_put; self.put_leg_open = False
-                        self.put_exit_reason = "10 DTE Exit"
+                        self._close_leg('put', worst_put, "10 DTE Exit")
                     if self.call_leg_open:
-                        self.call_leg_pnl = worst_call; self.call_leg_open = False
-                        self.call_exit_reason = "10 DTE Exit"
+                        self._close_leg('call', worst_call, "10 DTE Exit")
                     self.exit_reason = "10 DTE Exit (Cut Loss)"
                 self.is_open = False
                 self.exit_date = current_date
@@ -328,168 +324,26 @@ class IronCondorTrade:
         self.spx_price_at_expiration = spx_price
 
         if self.put_leg_open:
-            self.put_exit_reason = "Expiration"
             if spx_price <= self.put_long:
-                self.put_leg_pnl = self.put_credit - WING_WIDTH
+                self._close_leg('put', self.put_credit - WING_WIDTH, "Expiration")
             elif spx_price <= self.put_short:
-                self.put_leg_pnl = self.put_credit - (self.put_short - spx_price)
+                self._close_leg('put', self.put_credit - (self.put_short - spx_price), "Expiration")
             else:
-                self.put_leg_pnl = self.put_credit
-            self.put_leg_open = False
+                self._close_leg('put', self.put_credit, "Expiration")
 
         if self.call_leg_open:
-            self.call_exit_reason = "Expiration"
             if spx_price >= self.call_long:
-                self.call_leg_pnl = self.call_credit - WING_WIDTH
+                self._close_leg('call', self.call_credit - WING_WIDTH, "Expiration")
             elif spx_price >= self.call_short:
-                self.call_leg_pnl = self.call_credit - (spx_price - self.call_short)
+                self._close_leg('call', self.call_credit - (spx_price - self.call_short), "Expiration")
             else:
-                self.call_leg_pnl = self.call_credit
-            self.call_leg_open = False
+                self._close_leg('call', self.call_credit, "Expiration")
 
         self.exit_reason = "Expiration"
         self.pnl = self.banked_pnl + self.put_leg_pnl + self.call_leg_pnl
 
 class IronCondorTradeOpen(IronCondorTrade):
     # --------------------------------------------------------- exit checks
-
-    def check_exit(self, current_date, spx_price, vix, volatility, day_open=None, day_high=None, day_low=None):
-        """Same gap-aware exit logic as Options_Using_SPX_10.PY."""
-        if not self.is_open:
-            return False
-        if day_high is None: day_high = spx_price
-        if day_low is None: day_low = spx_price
-        if day_open is None: day_open = spx_price
-
-        dte = (self.expiration_date - current_date).days
-        T = max(dte / 365.0, 0.001)
-        r = RISK_FREE_RATE
-        put_vol = volatility * 1.10
-        call_vol = volatility * 0.95
-
-        if self.put_leg_open:
-            current_put_pnl = self._put_pnl(spx_price, T, r, put_vol)
-            put_pnl_low = self._put_pnl(day_low, T, r, put_vol)
-            put_pnl_high = self._put_pnl(day_high, T, r, put_vol)
-        else:
-            current_put_pnl = put_pnl_low = put_pnl_high = self.put_leg_pnl
-
-        if self.call_leg_open:
-            current_call_pnl = self._call_pnl(spx_price, T, r, call_vol)
-            call_pnl_low = self._call_pnl(day_low, T, r, call_vol)
-            call_pnl_high = self._call_pnl(day_high, T, r, call_vol)
-        else:
-            current_call_pnl = call_pnl_low = call_pnl_high = self.call_leg_pnl
-
-        # Stop loss = worst-case intraday
-        put_stop_hit = (self.put_leg_open and put_pnl_low < -self.put_credit * STOP_LOSS_MULTIPLIER)
-        call_stop_hit = (self.call_leg_open and call_pnl_high < -self.call_credit * STOP_LOSS_MULTIPLIER)
-
-        # Profit target = best-case intraday + banked PnL from rolls
-        put_pnl = put_pnl_high if self.put_leg_open else self.put_leg_pnl
-        call_pnl = call_pnl_low if self.call_leg_open else self.call_leg_pnl
-        best_total_with_banked = self.banked_pnl + put_pnl + call_pnl
-        profit_target_hit = best_total_with_banked >= self.profit_target_amount
-
-        if (put_stop_hit or call_stop_hit) and profit_target_hit:
-            profit_target_hit = False  # stop wins on same-day collisions
-
-        put_pnl_low_raw = put_pnl_low
-        call_pnl_high_raw = call_pnl_high
-
-        put_pnl_low, call_pnl_high, put_pnl, call_pnl = (
-            self._adjust_open_pnl(day_open, T, r, put_vol, call_vol,
-                                 current_put_pnl, put_pnl_high, put_pnl_low,
-                                 current_call_pnl, call_pnl_low, call_pnl_high))
-
-        if profit_target_hit:
-            self.is_open = False
-            self.exit_date = current_date
-            self.exit_reason = "50% Profit Target"
-            self.put_leg_pnl = put_pnl
-            self.call_leg_pnl = call_pnl
-            self.pnl = self.banked_pnl + self.put_leg_pnl + self.call_leg_pnl
-            self.put_leg_open = False
-            self.call_leg_open = False
-            self.spx_price_at_exit = spx_price
-            self.exited_at_profit_target = True
-            return True
-
-        if self.put_leg_open:
-            if vix > VIX_EXIT_PUT:
-                self.put_leg_open = False
-                self.put_leg_pnl = current_put_pnl
-                self.put_exit_reason = "VIX Exit"
-            elif put_stop_hit:
-                self.put_leg_open = False
-                self.put_leg_pnl = put_pnl_low
-                self.put_exit_reason = "PUT:Stop Loss"
-
-        if self.call_leg_open and call_stop_hit:
-            self.call_leg_open = False
-            self.call_leg_pnl = call_pnl_high
-            self.call_exit_reason = "CALL:Stop Loss"
-
-        # 10 DTE smart exit
-        if self.is_open and dte <= EXIT_DTE:
-            loss_threshold = -self.cumulative_credit * 0.50
-
-            worst_put = put_pnl_low_raw if self.put_leg_open else self.put_leg_pnl
-            worst_call = call_pnl_high_raw if self.call_leg_open else self.call_leg_pnl
-            worst_total = self.banked_pnl + worst_put + worst_call
-            best_put2 = put_pnl_high if self.put_leg_open else self.put_leg_pnl
-            best_call2 = call_pnl_low if self.call_leg_open else self.call_leg_pnl
-            best_total = self.banked_pnl + best_put2 + best_call2
-
-            cut_loss_hit = worst_total < loss_threshold
-            take_profit_hit = best_total > 0
-            if cut_loss_hit and take_profit_hit:
-                take_profit_hit = False
-
-            if take_profit_hit or cut_loss_hit:
-                if take_profit_hit:
-                    if self.put_leg_open:
-                        self.put_leg_pnl = best_put2
-                        self.put_leg_open = False
-                        self.put_exit_reason = "10 DTE Exit"
-                    if self.call_leg_open:
-                        self.call_leg_pnl = best_call2
-                        self.call_leg_open = False
-                        self.call_exit_reason = "10 DTE Exit"
-                    self.exit_reason = "10 DTE Exit (Profitable)"
-                else:
-                    if self.put_leg_open:
-                        self.put_leg_pnl = worst_put
-                        self.put_leg_open = False
-                        self.put_exit_reason = "10 DTE Exit"
-                    if self.call_leg_open:
-                        self.call_leg_pnl = worst_call
-                        self.call_leg_open = False
-                        self.call_exit_reason = "10 DTE Exit"
-                    self.exit_reason = "10 DTE Exit (Cut Loss)"
-                self.is_open = False
-                self.exit_date = current_date
-                self.pnl = self.banked_pnl + self.put_leg_pnl + self.call_leg_pnl
-                self.spx_price_at_exit = spx_price
-                self.exited_at_profit_target = True
-                return True
-
-        # Expiration
-        if current_date >= self.expiration_date:
-            self.spx_price_at_exit = spx_price
-            self.spx_price_at_expiration = spx_price
-            self._close_at_expiration(spx_price)
-            return True
-
-        if not self.put_leg_open and not self.call_leg_open:
-            self.is_open = False
-            self.exit_date = current_date
-            self.exit_reason = "Both legs stopped out"
-            self.pnl = self.banked_pnl + self.put_leg_pnl + self.call_leg_pnl
-            self.spx_price_at_exit = spx_price
-            return True
-
-        return False
 
     def _adjust_open_pnl(self, day_open, T, r, put_vol, call_vol,
                      current_put_pnl, put_pnl_high, put_pnl_low,
