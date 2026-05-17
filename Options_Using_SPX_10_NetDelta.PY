@@ -164,7 +164,8 @@ def run_backtest(spx_data, vix_data, start_date, end_date):
         # 1) Existing exit checks (gap-aware)
         trades_to_close = []
         for trade in open_trades:
-            if trade.check_exit(current_date, spx_price, vix, volatility, day_open=day_open, day_high=day_high, day_low=day_low):
+            if trade.check_exit(current_date, spx_price, vix, volatility,
+                                day_open=day_open, day_high=day_high, day_low=day_low):
                 trades_to_close.append(trade)
 
         # 2) Net-delta roll management for trades that survived the exits

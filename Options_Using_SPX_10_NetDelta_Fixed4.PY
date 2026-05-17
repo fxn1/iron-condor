@@ -86,6 +86,7 @@ def run_backtest(spx_data, vix_data, start_date, end_date):
         spx_price = spx_data[date_str]['close']
         day_high  = spx_data[date_str].get('high', spx_price)
         day_low   = spx_data[date_str].get('low',  spx_price)
+        day_open = spx_data[date_str].get('open',  spx_price)
         vix = vix_data[date_str]['close'] if date_str in vix_data else 18.0
 
         idx = sorted_dates.index(date_str)
@@ -100,7 +101,7 @@ def run_backtest(spx_data, vix_data, start_date, end_date):
         trades_to_close = []
         for trade in open_trades:
             if trade.check_exit(current_date, spx_price, vix, volatility,
-                                day_high=day_high, day_low=day_low):
+                                day_open=day_open, day_high=day_high, day_low=day_low):
                 trades_to_close.append(trade)
 
         for trade in open_trades:
