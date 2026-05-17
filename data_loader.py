@@ -94,7 +94,7 @@ def load_spx_daily_from_minute_files(start_year, end_year):
             if result is None:
                 continue
 
-            daily_dict, bars, fname = result
+            daily_dict, bars, _ = result
             total_bars += bars
             daily.update(daily_dict)
 

@@ -2,13 +2,65 @@
 """
 ================================================================================
 SPX IRON CONDOR - 10 YEAR BACKTEST
+WITH NET-DELTA ROLL MANAGEMENT (PER UPLOADED RULES)
+================================================================================
+
+This program extends Options_Using_SPX_10.PY by adding net-delta-driven
+position management.
+
+Net Delta Rules Applied (from uploaded screenshot):
+    Net Delta Range          Status     Action
+    -10 to +10               OK         Hold position
+    -15 to -10 / +10 to +15  Warning    Monitor closely
+    Beyond +/-15             Roll       Close & re-enter
+
+What "net delta" means here:
+    For each open iron condor we compute the position delta in
+    share-equivalent units per 1 contract spread:
+
+        put_pos_delta  = -delta(put_short)  + delta(put_long)
+        call_pos_delta = -delta(call_short) + delta(call_long)
+        net_delta_$    = (put_pos_delta + call_pos_delta) * 100
+
+    A 1-contract spread that controls 100 shares with a per-share delta of
+    +0.15 has a position delta of +15 share-equivalents.
+
+What "roll the threatened side" means:
+    A NET POSITIVE delta beyond +15 means the index has dropped enough that
+    the short PUT side has grown deep - the put side is THREATENED. We close
+    the entire put spread (locking in its current loss) and re-open a new
+    put spread on the SAME expiration whose short strike sits at the
+    PUT_DELTA target (18). Wing width unchanged.
+
+    A NET NEGATIVE delta beyond -15 means the index has rallied enough that
+    the short CALL side is THREATENED. We close the call spread and re-open
+    at the CALL_DELTA target (14).
+
+    The other (un-threatened) side is left alone.
+
+What carries over to the new spread:
+    * Same expiration (DTE keeps ticking down)
+    * Stops on the new spread are 2x its NEW credit
+    * Profit target stays at 50% of CUMULATIVE credit collected on this
+      trade (so collecting more credit by rolling raises the bar)
+    * The realized loss from the closed spread is "banked" against the trade
+      so the running PnL accounts for it
+
+Other behaviour preserved from Options_Using_SPX_10.PY:
+    * 18 / 14 delta entry, $50 wings on SPX, Monday entry, 30 DTE
+    * 50% profit target -> close & re-enter immediately
+    * 10 DTE smart exit
+    * Per-leg stop loss = 2x credit, gap-aware (worst intraday)
+    * VIX > 25 skip entry, VIX > 30 close puts
+    * Profit target uses each leg's BEST intraday price; stops use WORST
+      intraday price; if both fire same day, STOP wins (conservative)
 
 Inputs:
     * Real SPX 1-min data: spx_2016.xlsx ... spx_2026.xlsx
     * VIX_Daily_Data.xlsx from sibling SPY-DELTA folder
 
 Output:
-    * SPX_IronCondor_10Year_NetDelta_Fixed4_Backtest.csv
+    * SPX_IronCondor_10Year_NetDelta_Backtest.csv
     * Console report with roll statistics + yearly breakdown
 
 Author: Claude (adapted for PEC)
@@ -24,11 +76,14 @@ from config import *
 
 from data_loader import load_spx_daily_from_minute_files, load_vix_data_from_excel
 from volatility import calculate_historical_volatility
-from trade import IronCondorTrade
-from strategy_fixed4 import get_next_friday, create_new_trade, TradeEntryReason
+from strategy_fixed4 import get_next_friday, create_new_trade
 from strategy_fixed4 import Fixed4Strategy
+# TODO: compare IronCondorTradeOpen vs IronCondorTrade and consolidate if possible
+from trade import IronCondorTradeOpen
 from reporting import print_results
 from reporting import export_trades_to_csv
+
+STRIKE_INCREMENT = 5
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 VIX_DATA_PATH = os.path.normpath(
@@ -37,27 +92,35 @@ VIX_DATA_PATH = os.path.normpath(
 )
 OUTPUT_PATH = SCRIPT_DIR
 
-strategy = Fixed4Strategy()
+
+class NetDeltaStrategy(Fixed4Strategy):
+    pass
+
+
+strategy = NetDeltaStrategy()
+def is_monday(d): return d.weekday() == 0
+
+
 # ============================================================================
 # BACKTEST ENGINE
 # ============================================================================
 
-
 def run_backtest(spx_data, vix_data, start_date, end_date):
     print()
     print("=" * 80)
-    print("RUNNING 10-YEAR SPX BACKTEST  (NET-DELTA + FIXED *5 CAPITAL)")
+    print("RUNNING 10-YEAR SPX BACKTEST  (NET-DELTA ROLL MANAGEMENT)")
     print("=" * 80)
     print()
-    print(f"  Period:       {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
-    print(f"  Strategy:     18/14 Delta Iron Condor on SPX  (wing ${WING_WIDTH})")
-    print(f"  Roll rule:    |net delta| > {NET_DELTA_ROLL}  (warn at +/-{NET_DELTA_WARN})")
-    print(f"  Capital:      fixed assumption of {CONCURRENT_TRADES} concurrent trades")
-    print(f"  Exits:        50% profit, 10 DTE smart exit, 2x stop  (gap-aware)")
+    print(f"  Period:      {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
+    print(f"  Strategy:    18/14 Delta Iron Condor on SPX  (wing ${WING_WIDTH})")
+    print(f"  Roll rule:   |net delta| > {NET_DELTA_ROLL}  (warn at +/-{NET_DELTA_WARN})")
+    print(f"  Roll action: close threatened side, re-enter at fresh 18/14 delta")
+    print(f"  Cap:         max {MAX_ROLLS_PER_SIDE} rolls per side per trade")
+    print(f"  Exits:       50% profit, 10 DTE smart exit, 2x stop  (gap-aware)")
     print()
 
-    open_trades: List[IronCondorTrade] = []
-    closed_trades: List[IronCondorTrade] = []
+    open_trades: List[IronCondorTradeOpen] = []
+    closed_trades: List[IronCondorTradeOpen] = []
     used_expirations = set()
 
     sorted_dates = sorted(spx_data.keys())
@@ -74,7 +137,7 @@ def run_backtest(spx_data, vix_data, start_date, end_date):
     total_call_rolls = 0
     days_in_warn = 0
     days_in_roll_zone = 0
-    max_concurrent = 0   # Still tracked for INFORMATIONAL output
+    max_concurrent = 0  # 2. Track max concurrent open trades for capital analysis
 
     print("  Running backtest...")
 
@@ -86,6 +149,7 @@ def run_backtest(spx_data, vix_data, start_date, end_date):
         spx_price = spx_data[date_str]['close']
         day_high  = spx_data[date_str].get('high', spx_price)
         day_low   = spx_data[date_str].get('low',  spx_price)
+        day_open = spx_data[date_str].get('open',  spx_price)
         vix = vix_data[date_str]['close'] if date_str in vix_data else 18.0
 
         idx = sorted_dates.index(date_str)
@@ -97,21 +161,22 @@ def run_backtest(spx_data, vix_data, start_date, end_date):
         put_vol  = volatility * 1.10
         call_vol = volatility * 0.95
 
+        # 1) Existing exit checks (gap-aware)
         trades_to_close = []
         for trade in open_trades:
-            if trade.check_exit(current_date, spx_price, vix, volatility,
-                                day_high=day_high, day_low=day_low):
+            if trade.check_exit(current_date, spx_price, vix, volatility, day_open=day_open, day_high=day_high, day_low=day_low):
                 trades_to_close.append(trade)
 
+        # 2) Net-delta roll management for trades that survived the exits
         for trade in open_trades:
             if not trade.is_open:
                 continue
             if not (trade.put_leg_open and trade.call_leg_open):
-                continue
+                continue  # only roll true iron condors (both sides still on)
 
             dte = (trade.expiration_date - current_date).days
             if dte <= EXIT_DTE:
-                continue
+                continue  # near expiration -> let smart-exit handle it
             T = max(dte / 365.0, 0.001)
             net_delta = trade.net_position_delta(spx_price, T, RISK_FREE_RATE, put_vol, call_vol)
 
@@ -126,6 +191,7 @@ def run_backtest(spx_data, vix_data, start_date, end_date):
                     if trade.roll_call_side(current_date, spx_price, T, RISK_FREE_RATE, call_vol, volatility):
                         total_call_rolls += 1
 
+        # 3) Process closed trades and queue re-entries
         potential_reentries = []
         for trade in trades_to_close:
             exp_str = trade.expiration_date.strftime('%Y-%m-%d')
@@ -142,7 +208,7 @@ def run_backtest(spx_data, vix_data, start_date, end_date):
 
             open_trades.remove(trade)
             closed_trades.append(trade)
-            if strategy.should_reenter_after_exit(trade, vix):
+            if trade.exited_at_profit_target and vix <= VIX_NO_TRADE:
                 potential_reentries.append(True)
                 profit_target_exits += 1
 
@@ -159,17 +225,17 @@ def run_backtest(spx_data, vix_data, start_date, end_date):
         elif potential_reentries:
             skipped_duplicate_exp += 1
 
-        trade_reason = strategy.should_enter_trade(current_date, vix, exp_key, used_expirations)
-        if trade_reason == TradeEntryReason.SHOULD_ENTER:
-            trade_id += 1
-            new_trade = create_new_trade(current_date, spx_price, vix, volatility, trade_id)
-            open_trades.append(new_trade)
-            used_expirations.add(exp_key)
-            trades_entered += 1
-        elif trade_reason == TradeEntryReason.SKIPPED_VIX:
-            trades_skipped_vix += 1
-        elif trade_reason == TradeEntryReason.SKIPPED_DUP_EXP:
-            skipped_duplicate_exp += 1
+        if is_monday(current_date):
+            if vix > VIX_NO_TRADE:
+                trades_skipped_vix += 1
+            elif exp_key in used_expirations:
+                skipped_duplicate_exp += 1
+            else:
+                trade_id += 1
+                new_trade = create_new_trade(current_date, spx_price, vix, volatility, trade_id)
+                open_trades.append(new_trade)
+                used_expirations.add(exp_key)
+                trades_entered += 1
 
         # Track peak concurrent for INFORMATIONAL output. Capital sizing
         # in this variant uses the fixed CONCURRENT_TRADES constant instead.
@@ -229,35 +295,36 @@ def run_backtest(spx_data, vix_data, start_date, end_date):
         'rolled_trades': rolled_trades,
         'days_in_warn': days_in_warn,
         'days_in_roll_zone': days_in_roll_zone,
-        'max_concurrent': max_concurrent,   # informational only
+        'max_concurrent': max_concurrent,
     }
+
 
 # ============================================================================
 # MAIN
 # ============================================================================
 
-
 def main():
     print()
     print("=" * 80)
-    print("SPX IRON CONDOR - 10 YEAR BACKTEST  (NET-DELTA + FIXED *5 CAPITAL)")
-    print("Options_Using_SPX_10_NetDelta_Fixed4.PY")
+    print("SPX IRON CONDOR - 10 YEAR BACKTEST  (NET-DELTA ROLL MANAGEMENT)")
+    print("Options_Using_SPX_10_NetDelta.PY")
     print("=" * 80)
     print()
     print(f"  Underlying:    SPX (real 1-min data, resampled to daily)")
     print(f"  Strategy:      18/14 delta IC, ${WING_WIDTH} wings, Monday entry, {TARGET_DTE} DTE")
     print(f"  Roll rule:     |net delta| > {NET_DELTA_ROLL}  (warn at +/-{NET_DELTA_WARN})")
-    print(f"  Capital:       fixed assumption of {CONCURRENT_TRADES} concurrent trades")
+    print(f"  Roll action:   close threatened side, re-enter at fresh 18/14 delta")
     print()
 
     vix_data = None
     if os.path.exists(VIX_DATA_PATH):
         vix_data = load_vix_data_from_excel(VIX_DATA_PATH)
         if vix_data:
-            print(f"  Loaded {len(vix_data)} days of VIX data")
+            print(f"  ✓ Loaded {len(vix_data)} days of VIX data")
     if vix_data is None:
         print("  ERROR: VIX data not found")
-        return
+        # print("  ⚠ VIX data not found, defaulting VIX=18")
+        # vix_data = {d: {'close': 18.0} for d in spx_data.keys()}
     print()
 
     print("  Loading SPX minute data...")
@@ -265,32 +332,28 @@ def main():
     if spx_data is None:
         print("  ERROR: could not load SPX data")
         return
-    print(f"  Built {len(spx_data)} daily SPX bars")
+    print(f"  ✓ Built {len(spx_data)} daily SPX bars")
 
     years = (END_DATE - START_DATE).days / 365.25
     results = run_backtest(spx_data, vix_data, START_DATE, END_DATE)
 
     print_results(results, years)
 
-    csv_path = os.path.join(OUTPUT_PATH, 'SPX_IronCondor_10Year_NetDelta_Fixed4_Backtest.csv')
+    csv_path = os.path.join(OUTPUT_PATH, 'SPX_IronCondor_10Year_NetDelta_Backtest.csv')
     export_trades_to_csv(results, csv_path)
     print()
 
     avg_credit = sum(t.cumulative_credit for t in results['closed_trades']) / len(results['closed_trades'])
-    # Fixed capital sizing using the observed peak concurrent open trades = 5.
-    # (Original reviewer request was * 4, but tracking showed peak = 5, so
-    # using 4 understates capital ~20% and overstates ROC ~25%.)
-    margin = (WING_WIDTH - avg_credit) * 100 * 5
+    margin = (WING_WIDTH - avg_credit) * 100 * results['max_concurrent']
     annual_pnl = results['total_pnl_dollars'] / years
     roc = annual_pnl / margin * 100 if margin else 0
 
     print("=" * 80)
-    print("FINAL SUMMARY - 10 YEAR SPX BACKTEST  (NET-DELTA + FIXED *5 CAPITAL)")
+    print("FINAL SUMMARY - 10 YEAR SPX BACKTEST  (NET-DELTA ROLL MANAGEMENT)")
     print("=" * 80)
     print()
     print(f"  +{'-'*60}+")
     print(f"  |{'CAPITAL INVESTED:':^30}{'${:,.0f}'.format(margin):^30}|")
-    print(f"  |{'(fixed {} concurrent)'.format(CONCURRENT_TRADES):^30}{'peak obs: {}'.format(results['max_concurrent']):^30}|")
     print(f"  |{'TOTAL P&L (10 years):':^30}{'${:,.0f}'.format(results['total_pnl_dollars']):^30}|")
     if margin:
         print(f"  |{'TOTAL RETURN:':^30}{'{:.0f}%'.format(results['total_pnl_dollars']/margin*100):^30}|")
