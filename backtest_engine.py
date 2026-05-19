@@ -14,7 +14,7 @@ from datetime import timedelta
 from config import *
 from data_loader import load_spx_daily_from_minute_files, load_vix_data_from_excel
 from volatility import calculate_historical_volatility
-from strategy_fixed4 import get_next_friday, create_new_trade, TradeEntryReason
+from base_strategy import get_next_friday, create_new_trade, TradeEntryReason
 from reporting import print_results, export_trades_to_csv
 
 
@@ -28,6 +28,10 @@ def run_backtest(spx_data, vix_data, start_date, end_date, strategy, run_title, 
 
     Parameters
     ----------
+    spx_data     : dict of daily SPX bars, keyed by 'YYYY-MM-DD' string.
+    vix_data     : dict of daily VIX bars, keyed by 'YYYY-MM-DD' string.
+    start_date   : datetime of backtest start.
+    end_date     : datetime of backtest end.
     strategy     : BaseStrategy — provides should_enter_trade() and
                    should_reenter_after_exit().  All entry/re-entry policy
                    lives there; this function is policy-free.

@@ -6,6 +6,7 @@ STRIKE_INCREMENT = 5
 # BLACK-SCHOLES
 # ============================================================================
 
+
 def norm_cdf(x: float) -> float:
     return (1.0 + math.erf(x / math.sqrt(2.0))) / 2.0
 

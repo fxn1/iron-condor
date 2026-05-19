@@ -2,7 +2,8 @@ from concurrent.futures import ProcessPoolExecutor as Executor
 from concurrent.futures import as_completed
 
 import pandas as pd
-import glob, os
+import glob
+import os
 import time
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -12,14 +13,10 @@ SPX_GLOB   = os.path.join(SCRIPT_DIR, 'spx_*.xlsx')
 # DATA LOADING
 # ============================================================================
 
+
 def load_one_file(path):
     """Load a single SPX minute file and return (daily_dict, bars, fname)."""
     fname = os.path.basename(path)
-
-    try:
-        year = int(fname.lower().replace('spx_', '').split('.')[0])
-    except ValueError:
-        return None
 
     try:
         df = pd.read_excel(path)
@@ -60,7 +57,7 @@ def load_one_file(path):
         }
     print(f"  loaded {fname}: {bars:,} bars -> {len(daily_df)} days")
 
-    return (daily, bars, fname)
+    return daily, bars, fname
 
 
 def load_spx_daily_from_minute_files(start_year, end_year):
@@ -109,7 +106,6 @@ def load_spx_daily_from_minute_files(start_year, end_year):
 
 def load_vix_data_from_excel(filepath):
     try:
-        import pandas as pd
         df = pd.read_excel(filepath)
         df.columns = [c.strip().lower() for c in df.columns]
         out = {}
@@ -122,4 +118,3 @@ def load_vix_data_from_excel(filepath):
     except Exception as e:
         print(f"  Error loading VIX: {e}")
         return None
-

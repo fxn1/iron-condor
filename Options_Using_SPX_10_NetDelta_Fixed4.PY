@@ -15,15 +15,33 @@ Author: Claude (adapted for PEC)
 Date: May 2026
 ================================================================================
 """
-#!/usr/bin/env python3
-"""
-SPX Iron Condor — Net-Delta Roll Management, Fixed ×5 capital variant.
-Capital sized to a fixed assumption of CONCURRENT_TRADES (=5) concurrent trades.
-See backtest_engine.py for the shared engine.
-"""
 from config import *
-from strategy_fixed4 import Fixed4Strategy
 from backtest_engine import run_main
+from base_strategy import BaseStrategy, is_monday, TradeEntryReason
+
+
+class Fixed4Strategy(BaseStrategy):
+    """
+    SPX Iron Condor — Net-Delta Roll Management, Fixed ×5 capital variant.
+    Capital sized to a fixed assumption of CONCURRENT_TRADES (=5) concurrent trades.
+    See backtest_engine.py for the shared engine.
+    """
+
+    def should_enter_trade(self, current_date, vix, exp_key, used_expirations):
+        if not is_monday(current_date):
+            return TradeEntryReason.NOT_MONDAY
+
+        if vix > VIX_NO_TRADE:
+            return TradeEntryReason.SKIPPED_VIX
+
+        if exp_key in used_expirations:
+            return TradeEntryReason.SKIPPED_DUP_EXP
+
+        return TradeEntryReason.SHOULD_ENTER
+
+    def should_reenter_after_exit(self, trade, vix):
+        return trade.exited_at_profit_target and vix <= VIX_NO_TRADE
+
 
 if __name__ == "__main__":
     run_main(
