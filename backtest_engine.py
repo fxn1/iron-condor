@@ -195,10 +195,8 @@ def run_backtest(spx_data, vix_data, start_date, end_date, strategy, run_title, 
         r = t.exit_reason or "Unknown"
         exit_reasons[r] = exit_reasons.get(r, 0) + 1
 
-    rolled_trades = sum(1 for t in closed_trades if t.put_rolls or t.call_rolls)
-
+    rolled_trades = sum(1 for t in closed_trades if t.roll_stats()['rolled'])
     print("  Complete!\n")
-
     return {
         'total_trades':         n,
         'trades_entered':       trades_entered,
@@ -270,7 +268,7 @@ def run_main(*, strategy, title, script_name, capital_label, csv_filename, extra
     if os.path.exists(VIX_DATA_PATH):
         vix_data = load_vix_data_from_excel(VIX_DATA_PATH)
         if vix_data:
-            print(f"  ✓ Loaded {len(vix_data)} days of VIX data")
+            print(f"  Loaded {len(vix_data)} days of VIX data")
     if vix_data is None:
         print("  ERROR: VIX data not found")
         return
@@ -281,7 +279,7 @@ def run_main(*, strategy, title, script_name, capital_label, csv_filename, extra
     if spx_data is None:
         print("  ERROR: could not load SPX data")
         return
-    print(f"  ✓ Built {len(spx_data)} daily SPX bars")
+    print(f"  Built {len(spx_data)} daily SPX bars")
 
     years   = (END_DATE - START_DATE).days / 365.25
     results = run_backtest(spx_data, vix_data, START_DATE, END_DATE, strategy, title, capital_label)

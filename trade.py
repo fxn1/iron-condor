@@ -6,6 +6,19 @@ from pricing import find_strike_for_delta
 
 from config import *
 
+'''
+Trade
+    |
+    +-- OneSidedSpreadTrade
+    |       |
+    |       +-- PutSpreadTrade
+    |       +-- CallSpreadTrade
+    |
+    +-- IronCondorTrade
+            |
+            +-- IronCondorTradeOpen
+'''
+
 # ============================================================================
 # ABSTRACT BASE
 # ============================================================================
@@ -20,8 +33,7 @@ class Trade(ABC):
     abstract methods and optionally override manage_position / roll_stats.
     """
 
-    def __init__(self, entry_date, expiration_date, spx_price, vix,
-                 cumulative_credit, num_contracts=1, trade_id=0):
+    def __init__(self, entry_date, expiration_date, spx_price, vix, cumulative_credit, num_contracts=1, trade_id=0):
         self.trade_id           = trade_id
         self.entry_date         = entry_date
         self.expiration_date    = expiration_date
@@ -58,7 +70,7 @@ class Trade(ABC):
 
     # ── generic interface (IC overrides; others inherit no-ops) ──────────
 
-    def manage_position(self, current_date, spx_price, r, put_vol, call_vol, volatility) -> dict:
+    def manage_position(self, current_date, spx_price, r, put_vol, call_vol, volatility) -> tuple[bool, dict]:
         """
         Intraday position management (rolling, hedging, etc.).
         Called by the backtest engine after exit checks each day.
@@ -66,7 +78,7 @@ class Trade(ABC):
             { 'put_rolls', 'call_rolls', 'days_in_warn', 'days_in_roll_zone' }
         Default: no-op — spreads that don't roll just return zeros.
         """
-        return {}
+        return False, {}
 
     def can_roll(self) -> bool:
         """Whether the trade can still roll (if it has a rolling plan)."""
@@ -428,6 +440,12 @@ class IronCondorTrade(Trade):
         """Whether the trade can still roll (if it has a rolling plan)."""
         return self.put_leg_open and self.call_leg_open
 
+    def roll_stats(self) -> dict:
+        return {
+            'put_rolls':  len(self.put_rolls),
+            'call_rolls': len(self.call_rolls),
+            'rolled':     bool(self.put_rolls or self.call_rolls),
+        }
 
 class IronCondorTradeOpen(IronCondorTrade):
     # --------------------------------------------------------- exit checks
