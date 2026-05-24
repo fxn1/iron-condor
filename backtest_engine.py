@@ -103,25 +103,16 @@ def run_backtest(spx_data, vix_data, start_date, end_date, strategy, run_title, 
         for trade in open_trades:
             if not trade.is_open:
                 continue
-            if not (trade.put_leg_open and trade.call_leg_open):
+            if not trade.can_roll():
                 continue  # only roll true iron condors (both sides still on)
-
-            dte = (trade.expiration_date - current_date).days
-            if dte <= EXIT_DTE:
-                continue  # near expiration -> let smart-exit handle it
-            T = max(dte / 365.0, 0.001)
-            net_delta = trade.net_position_delta(spx_price, T, RISK_FREE_RATE, put_vol, call_vol)
-
-            if NET_DELTA_WARN < abs(net_delta) <= NET_DELTA_ROLL:
-                days_in_warn += 1
-            elif abs(net_delta) > NET_DELTA_ROLL:
-                days_in_roll_zone += 1
-                if net_delta > 0:
-                    if trade.roll_put_side(current_date, spx_price, T, RISK_FREE_RATE, put_vol, volatility):
-                        total_put_rolls += 1
-                else:
-                    if trade.roll_call_side(current_date, spx_price, T, RISK_FREE_RATE, call_vol, volatility):
-                        total_call_rolls += 1
+            rolled, stats = trade.manage_position(current_date, spx_price,
+                                          RISK_FREE_RATE, put_vol, call_vol, volatility)
+            if not rolled:
+                continue
+            days_in_warn += stats.get('days_in_warn', 0)
+            days_in_roll_zone += stats.get('days_in_roll_zone', 0)
+            total_put_rolls += stats.get('put_rolls', 0)
+            total_call_rolls += stats.get('call_rolls', 0)
 
         # 3) Process closed trades and queue re-entries
         potential_reentries = []

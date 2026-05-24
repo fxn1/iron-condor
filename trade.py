@@ -1,3 +1,5 @@
+from abc import ABC, abstractmethod
+
 from pricing import black_scholes_price
 from pricing import black_scholes_delta
 from pricing import find_strike_for_delta
@@ -5,41 +7,119 @@ from pricing import find_strike_for_delta
 from config import *
 
 # ============================================================================
+# ABSTRACT BASE
+# ============================================================================
+
+
+class Trade(ABC):
+    """
+    Abstract base for all option spread trades.
+
+    Owns every attribute the backtest engine and reporting layer touch
+    without knowing the trade type.  Subclasses implement the three
+    abstract methods and optionally override manage_position / roll_stats.
+    """
+
+    def __init__(self, entry_date, expiration_date, spx_price, vix,
+                 cumulative_credit, num_contracts=1, trade_id=0):
+        self.trade_id           = trade_id
+        self.entry_date         = entry_date
+        self.expiration_date    = expiration_date
+        self.spx_price_at_entry = spx_price
+        self.vix_at_entry       = vix
+        self.num_contracts      = num_contracts
+
+        # Credit / profit target — subclass __init__ passes initial credit;
+        # rolls update cumulative_credit
+        self.cumulative_credit    = cumulative_credit
+        self.banked_pnl           = 0.0
+
+        # Universal trade status
+        self.is_open                 = True
+        self.exit_date               = None
+        self.exit_reason             = None
+        self.pnl                     = 0.0
+        self.exited_at_profit_target = False
+        self.spx_price_at_exit       = None
+        self.spx_price_at_expiration = None
+
+    # ── must implement ────────────────────────────────────────────────────
+
+    @abstractmethod
+    def check_exit(self, current_date, spx_price, vix, volatility,
+                   day_open=None, day_high=None, day_low=None) -> bool:
+        """Return True and update state if the trade closes today."""
+        ...
+
+    @abstractmethod
+    def _close_at_expiration(self, spx_price):
+        """Set final pnl/status when expiration is reached."""
+        ...
+
+    # ── generic interface (IC overrides; others inherit no-ops) ──────────
+
+    def manage_position(self, current_date, spx_price, r, put_vol, call_vol, volatility) -> dict:
+        """
+        Intraday position management (rolling, hedging, etc.).
+        Called by the backtest engine after exit checks each day.
+        Returns a dict of stat increments understood by the engine:
+            { 'put_rolls', 'call_rolls', 'days_in_warn', 'days_in_roll_zone' }
+        Default: no-op — spreads that don't roll just return zeros.
+        """
+        return {}
+
+    def can_roll(self) -> bool:
+        """Whether the trade can still roll (if it has a rolling plan)."""
+        return False
+
+    def roll_stats(self) -> dict:
+        """
+        Lifetime roll counters for reporting.
+        Default: no rolls.
+        """
+        return {'put_rolls': 0, 'call_rolls': 0, 'rolled': False}
+
+    # ── shared helper ─────────────────────────────────────────────────────
+    def _finalize_trade_close(self, current_date, spx_price, reason):
+        self.is_open = False
+        self.exit_date = current_date
+        if reason:
+            self.exit_reason = reason
+        self.spx_price_at_exit = spx_price
+
+# ============================================================================
 # IRON CONDOR TRADE WITH NET-DELTA ROLL MANAGEMENT
 # ============================================================================
 
 
-class IronCondorTrade:
+class IronCondorTrade(Trade):
     """
-    Iron condor that supports rolling its threatened side.
+    Iron condor with net-delta roll management that supports rolling its threatened side.
 
     The trade tracks a *current* put spread and *current* call spread, plus
     the cumulative credit ever collected and the realized PnL banked from
     earlier (closed) instances of either spread when a roll happened.
 
-      total_pnl_at_any_time =
-          banked_pnl_from_rolls + open_put_pnl + open_call_pnl
-      profit_target_amount =
-          cumulative_credit_collected * PROFIT_TARGET
+      total_pnl = banked_pnl_from_rolls + open_put_pnl + open_call_pnl
     """
 
     def __init__(self, entry_date, expiration_date, spx_price, vix,
                  put_short, put_long, put_credit,
                  call_short, call_long, call_credit,
                  num_contracts=1, trade_id=0):
-        self.trade_id = trade_id
-        self.entry_date = entry_date
-        self.expiration_date = expiration_date
-        self.spx_price_at_entry = spx_price
-        self.vix_at_entry = vix
-        self.num_contracts = num_contracts
+        super().__init__(
+            entry_date, expiration_date, spx_price, vix,
+            cumulative_credit = put_credit + call_credit,
+            num_contracts     = num_contracts,
+            trade_id          = trade_id,
+        )
 
-        # CURRENT put spread
+        # Current put spread
         self.put_short = put_short
         self.put_long  = put_long
         self.put_credit = put_credit
 
-        # CURRENT call spread
+        # Current call spread
         self.call_short = call_short
         self.call_long  = call_long
         self.call_credit = call_credit
@@ -49,9 +129,6 @@ class IronCondorTrade:
         self.banked_pnl = 0.0
         self.put_rolls = []   # list of dicts describing each closed put spread
         self.call_rolls = []  # list of dicts describing each closed call spread
-
-        self.total_credit = self.cumulative_credit  # used by profit target
-        self.profit_target_amount = self.cumulative_credit * PROFIT_TARGET
 
         # Trade status
         self.is_open = True
@@ -73,9 +150,6 @@ class IronCondorTrade:
 
     # ------------------------------------------------------------------ rolls
 
-    def _refresh_profit_target(self):
-        self.total_credit = self.cumulative_credit
-        self.profit_target_amount = self.cumulative_credit * PROFIT_TARGET
 
     def roll_put_side(self, current_date, spx_price, T, r, put_vol, vol):
         """Close the current put spread, open a new one at PUT_DELTA target."""
@@ -107,7 +181,6 @@ class IronCondorTrade:
         self.put_credit = new_credit
         self.put_leg_pnl = 0.0
         self.cumulative_credit += new_credit
-        self._refresh_profit_target()
         return True
 
     def roll_call_side(self, current_date, spx_price, T, r, call_vol, vol):
@@ -138,7 +211,6 @@ class IronCondorTrade:
         self.call_credit = new_credit
         self.call_leg_pnl = 0.0
         self.cumulative_credit += new_credit
-        self._refresh_profit_target()
         return True
 
     # --------------------------------------------------------- net delta
@@ -230,7 +302,7 @@ class IronCondorTrade:
         put_pnl  = put_pnl_high if self.put_leg_open  else self.put_leg_pnl
         call_pnl = call_pnl_low if self.call_leg_open else self.call_leg_pnl
         best_total_with_banked = self.banked_pnl + put_pnl + call_pnl
-        profit_target_hit = best_total_with_banked >= self.profit_target_amount
+        profit_target_hit = best_total_with_banked >= self.cumulative_credit * PROFIT_TARGET
 
         if (put_stop_hit or call_stop_hit) and profit_target_hit:
             profit_target_hit = False  # stop wins on same-day collisions
@@ -245,13 +317,10 @@ class IronCondorTrade:
                      current_call_pnl, call_pnl_low, call_pnl_high))
 
         if profit_target_hit:
-            self.is_open = False
-            self.exit_date = current_date
-            self.exit_reason = "50% Profit Target"
+            self._finalize_trade_close(current_date, spx_price, "50% Profit Target")
             self._close_leg('put', put_pnl, "")
             self._close_leg('call', call_pnl, "")
             self.pnl = self.banked_pnl + self.put_leg_pnl + self.call_leg_pnl
-            self.spx_price_at_exit = spx_price
             self.exited_at_profit_target = True
             return True
 
@@ -293,10 +362,8 @@ class IronCondorTrade:
                     if self.call_leg_open:
                         self._close_leg('call', worst_call, "10 DTE Exit")
                     self.exit_reason = "10 DTE Exit (Cut Loss)"
-                self.is_open = False
-                self.exit_date = current_date
+                self._finalize_trade_close(current_date, spx_price, None)
                 self.pnl = self.banked_pnl + self.put_leg_pnl + self.call_leg_pnl
-                self.spx_price_at_exit = spx_price
                 self.exited_at_profit_target = True
                 return True
 
@@ -308,19 +375,14 @@ class IronCondorTrade:
             return True
 
         if not self.put_leg_open and not self.call_leg_open:
-            self.is_open = False
-            self.exit_date = current_date
-            self.exit_reason = "Both legs stopped out"
+            self._finalize_trade_close(current_date, spx_price, "Both legs stopped out")
             self.pnl = self.banked_pnl + self.put_leg_pnl + self.call_leg_pnl
-            self.spx_price_at_exit = spx_price
             return True
 
         return False
 
     def _close_at_expiration(self, spx_price):
-        self.is_open = False
-        self.exit_date = self.expiration_date
-        self.spx_price_at_exit = spx_price
+        self._finalize_trade_close(self.expiration_date, spx_price, None)
         self.spx_price_at_expiration = spx_price
 
         if self.put_leg_open:
@@ -341,6 +403,31 @@ class IronCondorTrade:
 
         self.exit_reason = "Expiration"
         self.pnl = self.banked_pnl + self.put_leg_pnl + self.call_leg_pnl
+
+    def manage_position(self, current_date, spx_price, r, put_vol, call_vol, volatility) -> tuple[bool, dict]:
+        stats = {'days_in_warn': 0, 'days_in_roll_zone':0, 'put_rolls': 0, 'call_rolls': 0}
+        dte = (self.expiration_date - current_date).days
+        if dte <= EXIT_DTE:
+            return False, stats # near expiration -> let smart-exit handle it
+        T = max(dte / 365.0, 0.001)
+        net_delta = self.net_position_delta(spx_price, T, r, put_vol, call_vol)
+
+        if NET_DELTA_WARN < abs(net_delta) <= NET_DELTA_ROLL:
+            stats['days_in_warn'] = 1
+        elif abs(net_delta) > NET_DELTA_ROLL:
+            stats['days_in_roll_zone'] = 1
+            if net_delta > 0:
+                if self.roll_put_side(current_date, spx_price, T, RISK_FREE_RATE, put_vol, volatility):
+                    stats['put_rolls'] = 1
+            else:
+                if self.roll_call_side(current_date, spx_price, T, RISK_FREE_RATE, call_vol, volatility):
+                    stats['call_rolls'] = 1
+        return True, stats
+
+    def can_roll(self) -> bool:
+        """Whether the trade can still roll (if it has a rolling plan)."""
+        return self.put_leg_open and self.call_leg_open
+
 
 class IronCondorTradeOpen(IronCondorTrade):
     # --------------------------------------------------------- exit checks
