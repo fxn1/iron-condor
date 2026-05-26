@@ -70,7 +70,7 @@ def print_results(results, years):
     margin_per = (WING_WIDTH - avg_credit) * 100
     # Fixed capital sizing using the observed peak concurrent open trades = 5.
     # (Reviewer originally asked for * 4, but tracking showed peak = 5.)
-    total_margin = margin_per * results['num_contracts'] * 5
+    total_margin = margin_per * results['num_contracts'] * 5  # TODO: use config CONCURRENT_TRADES constant instead of hardcoding 5 here
     annual_pnl = results['total_pnl_dollars'] / years
     roc = annual_pnl / total_margin * 100 if total_margin else 0
     print(f"    Avg Credit/Trade:       ${avg_credit:.2f} (incl. rolls)")

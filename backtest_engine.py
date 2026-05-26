@@ -83,7 +83,7 @@ def run_backtest(spx_data, vix_data, start_date, end_date, strategy, run_title, 
         day_open  = spx_data[date_str].get('open',  spx_price)
         vix = vix_data[date_str]['close'] if date_str in vix_data else 18.0
 
-        idx = sorted_dates.index(date_str)
+        idx = sorted_dates.index(date_str)  # TODO: optimize by tracking index in loop instead of .index() lookup  (O(n^2))
         if idx >= 20:
             hist = [spx_data[d]['close'] for d in sorted_dates[idx - 20:idx + 1]]
             volatility = calculate_historical_volatility(hist)
