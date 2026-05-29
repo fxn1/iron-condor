@@ -14,7 +14,7 @@ from datetime import timedelta
 from config import *
 from data_loader import load_spx_daily_from_minute_files, load_vix_data_from_excel
 from volatility import calculate_historical_volatility
-from base_strategy import get_next_friday, create_new_trade, TradeEntryReason
+from base_strategy import TradeEntryReason
 from reporting import print_results, export_trades_to_csv
 
 
@@ -52,23 +52,22 @@ def run_backtest(spx_data, vix_data, start_date, end_date, strategy, run_title, 
 
     open_trades   = []
     closed_trades = []
-    used_expirations = set()
 
     sorted_dates = sorted(spx_data.keys())
     dates = [datetime.strptime(d, '%Y-%m-%d') for d in sorted_dates]
     dates = [d for d in dates if start_date <= d <= end_date]
 
-    trade_id = 0
-    trades_entered       = 0
-    trades_skipped_vix   = 0
+    trade_id              = 0
+    trades_entered        = 0
+    trades_skipped_vix    = 0
     skipped_duplicate_exp = 0
-    profit_target_exits  = 0
-    reentry_trades       = 0
-    total_put_rolls      = 0
-    total_call_rolls     = 0
-    days_in_warn         = 0
-    days_in_roll_zone    = 0
-    max_concurrent       = 0  # Still tracked for INFORMATIONAL output
+    profit_target_exits   = 0
+    reentry_trades        = 0
+    total_put_rolls       = 0
+    total_call_rolls      = 0
+    days_in_warn          = 0
+    days_in_roll_zone     = 0
+    max_concurrent        = 0  # Still tracked for INFORMATIONAL output
 
     print("  Running backtest...")
 
@@ -85,8 +84,8 @@ def run_backtest(spx_data, vix_data, start_date, end_date, strategy, run_title, 
 
         idx = sorted_dates.index(date_str)  # TODO: optimize by tracking index in loop instead of .index() lookup  (O(n^2))
         if idx >= 20:
-            hist = [spx_data[d]['close'] for d in sorted_dates[idx - 20:idx + 1]]
-            volatility = calculate_historical_volatility(hist)
+            hist        = [spx_data[d]['close'] for d in sorted_dates[idx - 20:idx + 1]]
+            volatility  = calculate_historical_volatility(hist)
         else:
             volatility = 0.18
         put_vol  = volatility * 1.10
@@ -95,24 +94,24 @@ def run_backtest(spx_data, vix_data, start_date, end_date, strategy, run_title, 
         # 1) Exit checks (gap-aware)
         trades_to_close = []
         for trade in open_trades:
-            if trade.check_exit(current_date, spx_price, vix, volatility,
-                                day_open=day_open, day_high=day_high, day_low=day_low):
+            if trade.check_exit(current_date, spx_price, vix, volatility, day_open=day_open, day_high=day_high, day_low=day_low):
                 trades_to_close.append(trade)
 
+        # 2) Position management — delegated to trade type (IC rolls; others no-op)
         # 2) Net-delta roll management for trades that survived the exits
         for trade in open_trades:
             if not trade.is_open:
                 continue
+                # TODO: check calude code for continue
             if not trade.can_roll():
                 continue  # only roll true iron condors (both sides still on)
-            rolled, stats = trade.manage_position(current_date, spx_price,
-                                          RISK_FREE_RATE, put_vol, call_vol, volatility)
+            rolled, stats = trade.manage_position(current_date, spx_price, RISK_FREE_RATE, put_vol, call_vol, volatility)
             if not rolled:
                 continue
-            days_in_warn += stats.get('days_in_warn', 0)
+            days_in_warn      += stats.get('days_in_warn',      0)
             days_in_roll_zone += stats.get('days_in_roll_zone', 0)
-            total_put_rolls += stats.get('put_rolls', 0)
-            total_call_rolls += stats.get('call_rolls', 0)
+            total_put_rolls   += stats.get('put_rolls',         0)
+            total_call_rolls  += stats.get('call_rolls',        0)
 
         # 3) Process closed trades and queue re-entries
         potential_reentries = []
@@ -121,6 +120,7 @@ def run_backtest(spx_data, vix_data, start_date, end_date, strategy, run_title, 
             if exp_str in spx_data:
                 trade.spx_price_at_expiration = spx_data[exp_str]['close']
             else:
+                # TODO: check this logic with examples
                 for offset in range(-3, 4):
                     chk = (trade.expiration_date + timedelta(days=offset)).strftime('%Y-%m-%d')
                     if chk in spx_data:
@@ -131,29 +131,28 @@ def run_backtest(spx_data, vix_data, start_date, end_date, strategy, run_title, 
 
             open_trades.remove(trade)
             closed_trades.append(trade)
-            if strategy.should_reenter_after_exit(trade, vix):
+            if strategy.should_reenter_after_exit(trade):
                 potential_reentries.append(True)
                 profit_target_exits += 1
 
-        potential_expiration = get_next_friday(current_date, TARGET_DTE)
-        exp_key = potential_expiration.strftime('%Y-%m-%d')
-
-        if potential_reentries and exp_key not in used_expirations:
+        if potential_reentries and not strategy.check_expiration_used(current_date):
+            # Re-entry: ask strategy — it checks dup exp internally
             trade_id += 1
-            new_trade = create_new_trade(current_date, spx_price, vix, volatility, trade_id)
+            new_trade = strategy.create_trade(current_date, spx_price, volatility, trade_id)
             open_trades.append(new_trade)
-            used_expirations.add(exp_key)
+            strategy.mark_expiration_used(new_trade)
             trades_entered  += 1
             reentry_trades  += 1
         elif potential_reentries:
             skipped_duplicate_exp += 1
 
-        trade_reason = strategy.should_enter_trade(current_date, vix, exp_key, used_expirations)
+        # Regular Monday entry
+        trade_reason = strategy.should_enter_trade(current_date)
         if trade_reason == TradeEntryReason.SHOULD_ENTER:
             trade_id += 1
-            new_trade = create_new_trade(current_date, spx_price, vix, volatility, trade_id)
+            new_trade = strategy.create_trade(current_date, spx_price, volatility, trade_id)
             open_trades.append(new_trade)
-            used_expirations.add(exp_key)
+            strategy.mark_expiration_used(new_trade)
             trades_entered += 1
         elif trade_reason == TradeEntryReason.SKIPPED_VIX:
             trades_skipped_vix += 1
@@ -172,30 +171,35 @@ def run_backtest(spx_data, vix_data, start_date, end_date, strategy, run_title, 
         closed_trades.append(trade)
 
     # ── stats ──────────────────────────────────────────────────────────────
-    n      = len(closed_trades)
-    winning = sum(1 for t in closed_trades if t.pnl > 0)
-    losing  = sum(1 for t in closed_trades if t.pnl < 0)
-    total_pnl         = sum(t.pnl for t in closed_trades)
-    total_pnl_dollars = total_pnl * 100 * NUM_CONTRACTS
-    gp = sum(t.pnl for t in closed_trades if t.pnl > 0)
-    gl = sum(t.pnl for t in closed_trades if t.pnl < 0)
-    avg_win  = gp / winning if winning else 0
-    avg_loss = gl / losing  if losing  else 0
-    win_rate = winning / n * 100 if n else 0
-    pf       = abs(gp / gl) if gl else float('inf')
-
-    cum, peak, mdd = 0, 0, 0
-    for t in closed_trades:
-        cum  += t.pnl
-        peak  = max(peak, cum)
-        mdd   = max(mdd,  peak - cum)
-
+    n = winning = losing = total_pnl = gp = gl = rolled_trades = peak = mdd = 0
     exit_reasons = {}
     for t in closed_trades:
+        n           += 1
+        pnl         = t.pnl
+        total_pnl   += pnl
+
+        if pnl > 0:
+            winning += 1
+            gp += pnl
+        elif pnl < 0:
+            losing += 1
+            gl += pnl
+
+        if t.roll_stats()['rolled']:
+            rolled_trades += 1
+
+        peak = max(peak, total_pnl)
+        mdd = max(mdd, peak - total_pnl)
+
         r = t.exit_reason or "Unknown"
         exit_reasons[r] = exit_reasons.get(r, 0) + 1
 
-    rolled_trades = sum(1 for t in closed_trades if t.roll_stats()['rolled'])
+    # derived — computed once after the loop
+    total_pnl_dollars = total_pnl * 100 * NUM_CONTRACTS
+    avg_win = gp / winning if winning else 0
+    avg_loss = gl / losing if losing else 0
+    win_rate = winning / n * 100 if n else 0
+    pf = abs(gp / gl) if gl else float('inf')
     print("  Complete!\n")
     return {
         'total_trades':         n,
@@ -260,9 +264,9 @@ def run_main(*, strategy, title, script_name, capital_label, csv_filename, extra
     print(f"  {capital_label}")
     print()
 
-    SCRIPT_DIR   = os.path.dirname(os.path.abspath(__file__))
-    VIX_DATA_PATH= os.path.normpath(os.path.join(SCRIPT_DIR, 'VIX_Daily_Data.xlsx'))
-    output_path  = SCRIPT_DIR
+    SCRIPT_DIR    = os.path.dirname(os.path.abspath(__file__))
+    VIX_DATA_PATH = os.path.normpath(os.path.join(SCRIPT_DIR, 'VIX_Daily_Data.xlsx'))
+    output_path   = SCRIPT_DIR
 
     vix_data = None
     if os.path.exists(VIX_DATA_PATH):
@@ -273,6 +277,9 @@ def run_main(*, strategy, title, script_name, capital_label, csv_filename, extra
         print("  ERROR: VIX data not found")
         return
     print()
+
+    # Inject vix_data into strategy — strategy owns its own vix lookups
+    strategy.set_vix_data(vix_data)
 
     print("  Loading SPX minute data...")
     spx_data = load_spx_daily_from_minute_files(START_YEAR, END_YEAR)

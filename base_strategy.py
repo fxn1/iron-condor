@@ -1,11 +1,6 @@
 from datetime import timedelta
 from enum import Enum
 
-from config import *
-
-from pricing import black_scholes_price, find_strike_for_delta
-
-from trade import IronCondorTrade
 # ============================================================================
 # DATE HELPERS
 # ============================================================================
@@ -22,56 +17,33 @@ def get_next_friday(from_date, days_out=30):
     return friday
 
 
-# ============================================================================
-# TRADE CREATION
-# ============================================================================
-
-def create_new_trade(entry_date, spx_price, vix, volatility, trade_id):
-    expiration = get_next_friday(entry_date, TARGET_DTE)
-    dte = (expiration - entry_date).days
-    T = dte / 365.0
-    put_vol  = volatility * 1.10
-    call_vol = volatility * 0.95
-
-    put_short  = find_strike_for_delta(spx_price, PUT_DELTA,  T, RISK_FREE_RATE, put_vol,  'put')
-    put_long   = put_short - WING_WIDTH
-    call_short = find_strike_for_delta(spx_price, CALL_DELTA, T, RISK_FREE_RATE, call_vol, 'call')
-    call_long  = call_short + WING_WIDTH
-
-    ps = black_scholes_price(spx_price, put_short,  T, RISK_FREE_RATE, put_vol, 'put')
-    pl = black_scholes_price(spx_price, put_long,   T, RISK_FREE_RATE, put_vol, 'put')
-    put_credit  = ps - pl
-
-    cs = black_scholes_price(spx_price, call_short, T, RISK_FREE_RATE, call_vol, 'call')
-    cl = black_scholes_price(spx_price, call_long,  T, RISK_FREE_RATE, call_vol, 'call')
-    call_credit = cs - cl
-
-    return IronCondorTrade(
-        entry_date=entry_date,
-        expiration_date=expiration,
-        spx_price=spx_price,
-        vix=vix,
-        put_short=put_short, put_long=put_long, put_credit=put_credit,
-        call_short=call_short, call_long=call_long, call_credit=call_credit,
-        num_contracts=NUM_CONTRACTS,
-        trade_id=trade_id,
-    )
-
-
 def is_monday(d): return d.weekday() == 0
 
 
 class TradeEntryReason(Enum):
-    SHOULD_ENTER = "should_enter"
-    SKIPPED_VIX = "skipped_vix"
+    SHOULD_ENTER    = "should_enter"
+    SKIPPED_VIX     = "skipped_vix"
     SKIPPED_DUP_EXP = "skipped_dup_exp"
-    NOT_MONDAY = "not_monday"
+    NOT_MONDAY      = "not_monday"
+    NO_SIGNAL       = "no_signal"       # generic — used by stock strategy
 
 
 class BaseStrategy:
 
-    def should_enter_trade(self, current_date, vix, exp_key, used_expirations):
+    def set_vix_data(self, vix_data):
+        pass  # no-op default; override in strategies that need vix internally
+
+    def should_enter_trade(self, current_date) -> TradeEntryReason:
         raise NotImplementedError
 
-    def should_reenter_after_exit(self, trade, vix):
+    def should_reenter_after_exit(self, trade) -> bool:
+        raise NotImplementedError
+
+    def mark_expiration_used(self, trade):  # called by engine after entry
+        raise NotImplementedError
+
+    def check_expiration_used(self, current_date) -> bool:
+        raise NotImplementedError
+
+    def create_trade(self, current_date, spx_price, volatility, trade_id):
         raise NotImplementedError

@@ -162,7 +162,6 @@ class IronCondorTrade(Trade):
 
     # ------------------------------------------------------------------ rolls
 
-
     def roll_put_side(self, current_date, spx_price, T, r, put_vol, vol):
         """Close the current put spread, open a new one at PUT_DELTA target."""
         if len(self.put_rolls) >= MAX_ROLLS_PER_SIDE:
@@ -417,10 +416,10 @@ class IronCondorTrade(Trade):
         self.pnl = self.banked_pnl + self.put_leg_pnl + self.call_leg_pnl
 
     def manage_position(self, current_date, spx_price, r, put_vol, call_vol, volatility) -> tuple[bool, dict]:
-        stats = {'days_in_warn': 0, 'days_in_roll_zone':0, 'put_rolls': 0, 'call_rolls': 0}
+        stats = {'days_in_warn': 0, 'days_in_roll_zone': 0, 'put_rolls': 0, 'call_rolls': 0}
         dte = (self.expiration_date - current_date).days
         if dte <= EXIT_DTE:
-            return False, stats # near expiration -> let smart-exit handle it
+            return False, stats  # near expiration -> let smart-exit handle it
         T = max(dte / 365.0, 0.001)
         net_delta = self.net_position_delta(spx_price, T, r, put_vol, call_vol)
 
@@ -446,6 +445,7 @@ class IronCondorTrade(Trade):
             'call_rolls': len(self.call_rolls),
             'rolled':     bool(self.put_rolls or self.call_rolls),
         }
+
 
 class IronCondorTradeOpen(IronCondorTrade):
     # --------------------------------------------------------- exit checks

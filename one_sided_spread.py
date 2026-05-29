@@ -61,7 +61,7 @@ class OneSidedSpreadTrade(Trade):
     # ============================================================
 
     def _spread_value(self, S, T, r, vol):
-        short_price = black_scholes_price(S, self.short_strike, T, r, vol,self.option_type())
+        short_price = black_scholes_price(S, self.short_strike, T, r, vol, self.option_type())
         long_price = black_scholes_price(S, self.long_strike, T, r, vol, self.option_type())
         return short_price - long_price
 
@@ -97,7 +97,7 @@ class OneSidedSpreadTrade(Trade):
 
         self.banked_pnl += realized
 
-        new_short = find_strike_for_delta(spx_price, self.target_delta(), T, r, vol,self.option_type())
+        new_short = find_strike_for_delta(spx_price, self.target_delta(), T, r, vol, self.option_type())
         new_long = self.long_strike_from_short(new_short)
 
         short_price = black_scholes_price(spx_price, new_short, T, r, vol, self.option_type())
@@ -163,7 +163,7 @@ class OneSidedSpreadTrade(Trade):
             profit_target_hit = False  # stop wins on same-day collisions
 
         if stop_hit:
-            self._close_trade( min(pnl_high, pnl_low), "Stop Loss", current_date, spx_price)
+            self._close_trade(min(pnl_high, pnl_low), "Stop Loss", current_date, spx_price)
             return True
 
         if profit_target_hit:

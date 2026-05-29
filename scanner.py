@@ -12,6 +12,7 @@ not in the logic below.
 
 from dataclasses import dataclass
 from datetime import date, timedelta
+from typing import Optional
 
 import pandas as pd
 import pandas_ta_classic as ta
@@ -63,6 +64,7 @@ def _ema_trending_up(close: pd.Series, cfg: ScannerConfig) -> bool:
         return False
     return ema.iloc[-1] > ema.iloc[-1 - cfg.ema_trend_days]
 
+
 # single point check not enough. see description in _ema_trending_up. also, what if ema is flat?
 def _rsi_slope(close: pd.Series, cfg: ScannerConfig) -> float:
     """Slope of RSI(period) over last rsi_slope_days days."""
@@ -72,11 +74,12 @@ def _rsi_slope(close: pd.Series, cfg: ScannerConfig) -> float:
     return (rsi.iloc[-1] - rsi.iloc[-1 - cfg.rsi_slope_days]) / cfg.rsi_slope_days
 
 
-def _find_support(close: pd.Series, cfg: ScannerConfig) -> float | None:
+def _find_support(close: pd.Series, cfg: ScannerConfig) -> Optional[float]:
     """Rolling N-day low as support level."""
     if len(close) < cfg.support_lookback:
         return None
     return float(close.rolling(cfg.support_lookback).min().iloc[-1])
+
 
 # use the pricing funcitons to get strike for a given delta instead of this. this is just a rough approximation and may not be accurate enough for backtesting.
 def _nearest_strike_below(price: float, increment: float) -> float:
@@ -90,13 +93,12 @@ def _nearest_strike_below(price: float, increment: float) -> float:
 # ============================================================================
 
 
-def scan(ticker: str, current_date: date, price_df: pd.DataFrame, earnings_dates: list[date], cfg: ScannerConfig = DEFAULT_CONFIG ) -> tuple[bool, float | None]:
+def scan(current_date: date, price_df: pd.DataFrame, earnings_dates: list[date], cfg: ScannerConfig = DEFAULT_CONFIG) -> tuple[bool, Optional[float]]:
     """
     Decide whether to enter a put spread on ticker today.
 
     Parameters
     ----------
-    ticker        : stock symbol (for logging only)
     current_date  : date being evaluated
     price_df      : DataFrame with DatetimeIndex and at least a 'Close' column,
                     as returned by cachebt.get_ticker()
