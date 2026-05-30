@@ -21,7 +21,7 @@ class OneSidedSpreadTrade(Trade):
         - expiration_pnl()
     """
 
-    def __init__(self, entry_date, expiration_date, spx_price, vix, short_strike, long_strike, credit, num_contracts=1, trade_id=0):
+    def __init__(self, entry_date, expiration_date, spx_price, vix, short_strike, long_strike, credit, num_contracts, trade_id, profit_target_pct):
         super().__init__(entry_date, expiration_date, spx_price, vix, credit, num_contracts, trade_id)
 
         self.short_strike = short_strike
@@ -31,6 +31,7 @@ class OneSidedSpreadTrade(Trade):
         self.leg_open = True
         self.leg_pnl = 0.0
         self.leg_exit_reason = None
+        self.profit_target_amount = credit * profit_target_pct
 
     # ============================================================
     # ABSTRACTS
@@ -157,7 +158,7 @@ class OneSidedSpreadTrade(Trade):
 
         stop_hit = self.stop_trigger_hit(min(pnl_high, pnl_low))
         best_pnl = max(pnl_high, pnl_low)
-        profit_target_hit = self.banked_pnl + best_pnl >= self.cumulative_credit * PROFIT_TARGET
+        profit_target_hit = self.banked_pnl + best_pnl >= self.profit_target_amount
 
         if stop_hit and profit_target_hit:
             profit_target_hit = False  # stop wins on same-day collisions

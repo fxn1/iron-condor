@@ -6,10 +6,10 @@ from config import *
 
 class PutSpreadTrade(OneSidedSpreadTrade):
 
-    def __init__(self, entry_date, expiration_date, spx_price, vix, short_strike, long_strike, credit, num_contracts, trade_id, wing_width, profit_target_pct):
-        super().__init__(entry_date, expiration_date, spx_price, vix, short_strike, long_strike, credit, num_contracts, trade_id)
+    def __init__(self, entry_date, expiration_date, spx_price, vix, short_strike, long_strike, credit, num_contracts, trade_id, wing_width, profit_target_pct, ticker):
+        super().__init__(entry_date, expiration_date, spx_price, vix, short_strike, long_strike, credit, num_contracts, trade_id, profit_target_pct)
         self.wing_width = wing_width
-        self.profit_target_amount = credit * profit_target_pct  # override base
+        self.ticker = ticker
 
     def option_type(self):
         return 'put'
@@ -35,7 +35,7 @@ class PutSpreadTrade(OneSidedSpreadTrade):
         return self.credit
 
 
-def create_put_spread_from_scan(entry_date, expiration_date, spx_price, vix, short_strike, volatility, trade_id, wing_width, profit_target_pct, num_contracts):
+def create_put_spread_from_scan(entry_date, expiration_date, spx_price, vix, short_strike, volatility, trade_id, wing_width, profit_target_pct, num_contracts, ticker):
     """
     Construct a PutSpreadTrade from scanner output.
     short_strike comes from scanner.scan(); long_strike derived here.
@@ -61,4 +61,5 @@ def create_put_spread_from_scan(entry_date, expiration_date, spx_price, vix, sho
         trade_id=trade_id,
         wing_width=wing_width,
         profit_target_pct=profit_target_pct,
+        ticker=ticker
     )

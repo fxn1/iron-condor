@@ -1,5 +1,9 @@
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from datetime import timedelta
 from enum import Enum
+from typing import Optional
+
 
 # ============================================================================
 # DATE HELPERS
@@ -28,22 +32,60 @@ class TradeEntryReason(Enum):
     NO_SIGNAL       = "no_signal"       # generic — used by stock strategy
 
 
-class BaseStrategy:
+@dataclass
+class TradeSignal:
+    """Carries per-signal data from should_enter_trades to the engine.
+    SPX strategies leave ticker/strike as None — not needed.
+    Stock strategies populate both.
+    reason is always set.  ticker/strike only populated for SHOULD_ENTER signals."""
+    reason: TradeEntryReason
+    ticker: Optional[str] = None
+    strike: Optional[float] = None
+
+
+class BaseStrategy(ABC):
 
     def set_vix_data(self, vix_data):
         pass  # no-op default; override in strategies that need vix internally
 
-    def should_enter_trade(self, current_date) -> TradeEntryReason:
+    def set_spx_data(self, spx_data):
+        pass    # no-op; override in strategies that need price data internally
+
+    @abstractmethod
+    def should_enter_trades(self, current_date) -> list[TradeSignal]:
+        """Return a list of TradeSignal for each trade to enter today.
+        one entry per signal or skip reason.
+        Empty list means no entry.  SPX strategies return at most one item.
+        Engine counts skips from signal.reason; creates trades for SHOULD_ENTER."""
         raise NotImplementedError
 
-    def should_reenter_after_exit(self, trade) -> bool:
+    @abstractmethod
+    def should_reenter_after_exit(self, trade) -> TradeSignal:
         raise NotImplementedError
 
-    def mark_expiration_used(self, trade):  # called by engine after entry
+    @abstractmethod
+    def mark_expiration_used(self, trade):
+        raise NotImplementedError
+
+    def mark_reentry_expiration_used(self, current_date):
+        raise NotImplementedError
+
+    @abstractmethod
+    def create_trade(self, current_date, trade_id, signal: TradeSignal):
+        """Build and return a Trade from a TradeSignal.
+        Strategy owns price and vol lookup — engine passes nothing extra."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_market_data(self, trade, date_str) -> dict:
+        """Return market data needed by the engine for an open trade today.
+        Must include: close, high, low, open, vix, volatility, put_vol, call_vol"""
         raise NotImplementedError
 
     def check_expiration_used(self, current_date) -> bool:
         raise NotImplementedError
 
-    def create_trade(self, current_date, spx_price, volatility, trade_id):
+    def get_trading_dates(self, start_date, end_date) -> list:
+        """Return sorted list of trading datetimes for the backtest period.
+        Default: subclass must override or engine passes dates directly."""
         raise NotImplementedError

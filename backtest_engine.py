@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 """
-backtest_engine.py — shared engine for all SPX iron condor backtests.
+backtest_engine.py — shared engine for all SPX iron condor and PutSpread backtests.
 
 Both Options_Using_SPX_10_NetDelta.PY and Options_Using_SPX_10_NetDelta_Fixed4.PY
 delegate their run_backtest() and main() logic here.  Per-script differences are
 injected via parameters so this file never needs to change when a new variant is
 added.
+Fully generic: no price lookups, no vol calculations, no vix lookups.
+All market data comes from strategy.get_market_data().
+Works for both SPX iron condor and stock put spread strategies.
+
 """
 
 import os
@@ -13,7 +17,6 @@ from datetime import timedelta
 
 from config import *
 from data_loader import load_spx_daily_from_minute_files, load_vix_data_from_excel
-from volatility import calculate_historical_volatility
 from base_strategy import TradeEntryReason
 from reporting import print_results, export_trades_to_csv
 
@@ -22,7 +25,7 @@ from reporting import print_results, export_trades_to_csv
 # BACKTEST ENGINE
 # ============================================================================
 
-def run_backtest(spx_data, vix_data, start_date, end_date, strategy, run_title, capital_label):
+def run_backtest(spx_data, start_date, end_date, strategy, run_title, capital_label):
     """
     Unified backtest loop.
 
@@ -44,8 +47,6 @@ def run_backtest(spx_data, vix_data, start_date, end_date, strategy, run_title, 
     print("=" * 80)
     print()
     print(f"  Period:      {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
-    print(f"  Strategy:    18/14 Delta Iron Condor on SPX  (wing ${WING_WIDTH})")
-    print(f"  Roll rule:   |net delta| > {NET_DELTA_ROLL}  (warn at +/-{NET_DELTA_WARN})")
     print(f"  {capital_label}")
     print(f"  Exits:       50% profit, 10 DTE smart exit, 2x stop  (gap-aware)")
     print()
@@ -53,9 +54,7 @@ def run_backtest(spx_data, vix_data, start_date, end_date, strategy, run_title, 
     open_trades   = []
     closed_trades = []
 
-    sorted_dates = sorted(spx_data.keys())
-    dates = [datetime.strptime(d, '%Y-%m-%d') for d in sorted_dates]
-    dates = [d for d in dates if start_date <= d <= end_date]
+    dates = strategy.get_trading_dates(start_date, end_date)
 
     trade_id              = 0
     trades_entered        = 0
@@ -73,41 +72,30 @@ def run_backtest(spx_data, vix_data, start_date, end_date, strategy, run_title, 
 
     for current_date in dates:
         date_str = current_date.strftime('%Y-%m-%d')
-        if date_str not in spx_data:
-            continue
 
-        spx_price = spx_data[date_str]['close']
-        day_high  = spx_data[date_str].get('high',  spx_price)
-        day_low   = spx_data[date_str].get('low',   spx_price)
-        day_open  = spx_data[date_str].get('open',  spx_price)
-        vix = vix_data[date_str]['close'] if date_str in vix_data else 18.0
-
-        idx = sorted_dates.index(date_str)  # TODO: optimize by tracking index in loop instead of .index() lookup  (O(n^2))
-        if idx >= 20:
-            hist        = [spx_data[d]['close'] for d in sorted_dates[idx - 20:idx + 1]]
-            volatility  = calculate_historical_volatility(hist)
-        else:
-            volatility = 0.18
-        put_vol  = volatility * 1.10
-        call_vol = volatility * 0.95
-
-        # 1) Exit checks (gap-aware)
         trades_to_close = []
         for trade in open_trades:
-            if trade.check_exit(current_date, spx_price, vix, volatility, day_open=day_open, day_high=day_high, day_low=day_low):
+            md = strategy.get_market_data(trade, date_str)
+            close       = md['close']
+            day_high    = md['high']
+            day_low     = md['low']
+            day_open    = md['open']
+            vix         = md['vix']
+            volatility = md['volatility']
+            # 1) Exit checks (gap-aware)
+            if trade.check_exit(current_date, close, vix, volatility, day_open=day_open, day_high=day_high, day_low=day_low):
                 trades_to_close.append(trade)
 
-        # 2) Position management — delegated to trade type (IC rolls; others no-op)
-        # 2) Net-delta roll management for trades that survived the exits
         for trade in open_trades:
+            # 2) Position management — delegated to trade type (IC rolls; others no-op)
+            # 2) Net-delta roll management for trades that survived the exits
             if not trade.is_open:
                 continue
-                # TODO: check calude code for continue
-            if not trade.can_roll():
-                continue  # only roll true iron condors (both sides still on)
-            rolled, stats = trade.manage_position(current_date, spx_price, RISK_FREE_RATE, put_vol, call_vol, volatility)
-            if not rolled:
-                continue
+            md = strategy.get_market_data(trade, date_str)
+            close       = md['close']
+            put_vol     = md['put_vol']
+            call_vol    = md['call_vol']
+            stats       = trade.manage_position(current_date, close, RISK_FREE_RATE, put_vol, call_vol)
             days_in_warn      += stats.get('days_in_warn',      0)
             days_in_roll_zone += stats.get('days_in_roll_zone', 0)
             total_put_rolls   += stats.get('put_rolls',         0)
@@ -116,48 +104,40 @@ def run_backtest(spx_data, vix_data, start_date, end_date, strategy, run_title, 
         # 3) Process closed trades and queue re-entries
         potential_reentries = []
         for trade in trades_to_close:
-            exp_str = trade.expiration_date.strftime('%Y-%m-%d')
-            if exp_str in spx_data:
-                trade.spx_price_at_expiration = spx_data[exp_str]['close']
-            else:
-                # TODO: check this logic with examples
-                for offset in range(-3, 4):
-                    chk = (trade.expiration_date + timedelta(days=offset)).strftime('%Y-%m-%d')
-                    if chk in spx_data:
-                        trade.spx_price_at_expiration = spx_data[chk]['close']
-                        break
-            if trade.spx_price_at_expiration is None:
-                trade.spx_price_at_expiration = trade.spx_price_at_exit
-
+            _fill_expiration_price(trade, spx_data, strategy)
             open_trades.remove(trade)
             closed_trades.append(trade)
-            if strategy.should_reenter_after_exit(trade):
-                potential_reentries.append(True)
+            signal = strategy.should_reenter_after_exit(trade)
+            # only one reentry per day
+            if signal.reason == TradeEntryReason.SHOULD_ENTER and not strategy.check_expiration_used(current_date):
+                potential_reentries.append(signal)
+                strategy.mark_reentry_expiration_used(current_date)  # ← marks today, not trade expiration date
                 profit_target_exits += 1
 
-        if potential_reentries and not strategy.check_expiration_used(current_date):
+        # Re-entries
+        if potential_reentries:
             # Re-entry: ask strategy — it checks dup exp internally
-            trade_id += 1
-            new_trade = strategy.create_trade(current_date, spx_price, volatility, trade_id)
-            open_trades.append(new_trade)
-            strategy.mark_expiration_used(new_trade)
-            trades_entered  += 1
-            reentry_trades  += 1
+            for signal in potential_reentries:
+                trade_id += 1
+                new_trade = strategy.create_trade(current_date, trade_id, signal)
+                open_trades.append(new_trade)
+                trades_entered  += 1
+                reentry_trades  += 1
         elif potential_reentries:
             skipped_duplicate_exp += 1
 
-        # Regular Monday entry
-        trade_reason = strategy.should_enter_trade(current_date)
-        if trade_reason == TradeEntryReason.SHOULD_ENTER:
-            trade_id += 1
-            new_trade = strategy.create_trade(current_date, spx_price, volatility, trade_id)
-            open_trades.append(new_trade)
-            strategy.mark_expiration_used(new_trade)
-            trades_entered += 1
-        elif trade_reason == TradeEntryReason.SKIPPED_VIX:
-            trades_skipped_vix += 1
-        elif trade_reason == TradeEntryReason.SKIPPED_DUP_EXP:
-            skipped_duplicate_exp += 1
+        # Regular entries
+        for signal in strategy.should_enter_trades(current_date):
+            if signal.reason == TradeEntryReason.SHOULD_ENTER:
+                trade_id += 1
+                new_trade = strategy.create_trade(current_date, trade_id, signal)
+                open_trades.append(new_trade)
+                strategy.mark_expiration_used(new_trade)
+                trades_entered += 1
+            elif signal.reason == TradeEntryReason.SKIPPED_VIX:
+                trades_skipped_vix += 1
+            elif signal.reason == TradeEntryReason.SKIPPED_DUP_EXP:
+                skipped_duplicate_exp += 1
 
         # Track peak concurrent for INFORMATIONAL output. Capital sizing
         # in this variant uses the fixed CONCURRENT_TRADES constant instead.
@@ -166,11 +146,12 @@ def run_backtest(spx_data, vix_data, start_date, end_date, strategy, run_title, 
     # Force-close anything still open at end of period
     for trade in open_trades:
         last_str  = dates[-1].strftime('%Y-%m-%d')
-        spx_price = spx_data[last_str]['close']
+        md = strategy.get_market_data(trade, last_str)
+        spx_price = md['close']
         trade._close_at_expiration(spx_price)
         closed_trades.append(trade)
 
-    # ── stats ──────────────────────────────────────────────────────────────
+    # ── stats — single pass ───────────────────────────────────────────────
     n = winning = losing = total_pnl = gp = gl = rolled_trades = peak = mdd = 0
     exit_reasons = {}
     for t in closed_trades:
@@ -200,12 +181,13 @@ def run_backtest(spx_data, vix_data, start_date, end_date, strategy, run_title, 
     avg_loss = gl / losing if losing else 0
     win_rate = winning / n * 100 if n else 0
     pf = abs(gp / gl) if gl else float('inf')
+    skips = {'skipped_vix': trades_skipped_vix, 'skipped_dup_exp': skipped_duplicate_exp}
     print("  Complete!\n")
     return {
         'total_trades':         n,
         'trades_entered':       trades_entered,
-        'trades_skipped_vix':   trades_skipped_vix,
-        'skipped_duplicate_exp': skipped_duplicate_exp,
+        'trades_skipped_vix':    skips['skipped_vix'],
+        'skipped_duplicate_exp': skips['skipped_dup_exp'],
         'profit_target_exits':  profit_target_exits,
         'reentry_trades':       reentry_trades,
         'winning_trades':       winning,
@@ -230,6 +212,23 @@ def run_backtest(spx_data, vix_data, start_date, end_date, strategy, run_title, 
         'days_in_roll_zone':    days_in_roll_zone,
         'max_concurrent':       max_concurrent,
     }
+
+
+def _fill_expiration_price(trade, spx_data, strategy):
+    """Look up SPX price at expiration for reporting.  Falls back to exit price."""
+    if trade.spx_price_at_expiration is not None:
+        return
+    exp_str = trade.expiration_date.strftime('%Y-%m-%d')
+    if spx_data and exp_str in spx_data:
+        trade.spx_price_at_expiration = spx_data[exp_str]['close']
+        return
+    for offset in range(-3, 4):
+        chk = (trade.expiration_date + timedelta(days=offset)).strftime('%Y-%m-%d')
+        md  = strategy.get_market_data(trade, chk)
+        if md['close']:
+            trade.spx_price_at_expiration = md['close']
+            return
+    trade.spx_price_at_expiration = trade.spx_price_at_exit
 
 
 # ============================================================================
@@ -278,9 +277,6 @@ def run_main(*, strategy, title, script_name, capital_label, csv_filename, extra
         return
     print()
 
-    # Inject vix_data into strategy — strategy owns its own vix lookups
-    strategy.set_vix_data(vix_data)
-
     print("  Loading SPX minute data...")
     spx_data = load_spx_daily_from_minute_files(START_YEAR, END_YEAR)
     if spx_data is None:
@@ -288,8 +284,12 @@ def run_main(*, strategy, title, script_name, capital_label, csv_filename, extra
         return
     print(f"  Built {len(spx_data)} daily SPX bars")
 
+    # Inject vix_data into strategy — strategy owns its own vix lookups
+    strategy.set_vix_data(vix_data)
+    strategy.set_spx_data(spx_data)
+
     years   = (END_DATE - START_DATE).days / 365.25
-    results = run_backtest(spx_data, vix_data, START_DATE, END_DATE, strategy, title, capital_label)
+    results = run_backtest(spx_data, START_DATE, END_DATE, strategy, title, capital_label)
 
     print_results(results, years)
 

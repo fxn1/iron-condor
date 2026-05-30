@@ -70,7 +70,7 @@ class Trade(ABC):
 
     # ── generic interface (IC overrides; others inherit no-ops) ──────────
 
-    def manage_position(self, current_date, spx_price, r, put_vol, call_vol, volatility) -> tuple[bool, dict]:
+    def manage_position(self, current_date, spx_price, r, put_vol, call_vol) -> dict:
         """
         Intraday position management (rolling, hedging, etc.).
         Called by the backtest engine after exit checks each day.
@@ -78,11 +78,7 @@ class Trade(ABC):
             { 'put_rolls', 'call_rolls', 'days_in_warn', 'days_in_roll_zone' }
         Default: no-op — spreads that don't roll just return zeros.
         """
-        return False, {}
-
-    def can_roll(self) -> bool:
-        """Whether the trade can still roll (if it has a rolling plan)."""
-        return False
+        return {}
 
     def roll_stats(self) -> dict:
         """
@@ -162,7 +158,7 @@ class IronCondorTrade(Trade):
 
     # ------------------------------------------------------------------ rolls
 
-    def roll_put_side(self, current_date, spx_price, T, r, put_vol, vol):
+    def roll_put_side(self, current_date, spx_price, T, r, put_vol):
         """Close the current put spread, open a new one at PUT_DELTA target."""
         if len(self.put_rolls) >= MAX_ROLLS_PER_SIDE:
             return False
@@ -194,7 +190,7 @@ class IronCondorTrade(Trade):
         self.cumulative_credit += new_credit
         return True
 
-    def roll_call_side(self, current_date, spx_price, T, r, call_vol, vol):
+    def roll_call_side(self, current_date, spx_price, T, r, call_vol):
         """Close the current call spread, open a new one at CALL_DELTA target."""
         if len(self.call_rolls) >= MAX_ROLLS_PER_SIDE:
             return False
@@ -415,11 +411,13 @@ class IronCondorTrade(Trade):
         self.exit_reason = "Expiration"
         self.pnl = self.banked_pnl + self.put_leg_pnl + self.call_leg_pnl
 
-    def manage_position(self, current_date, spx_price, r, put_vol, call_vol, volatility) -> tuple[bool, dict]:
+    def manage_position(self, current_date, spx_price, r, put_vol, call_vol) -> dict:
         stats = {'days_in_warn': 0, 'days_in_roll_zone': 0, 'put_rolls': 0, 'call_rolls': 0}
+        if not (self.put_leg_open and self.call_leg_open):
+            return stats  # only manage if both legs still open
         dte = (self.expiration_date - current_date).days
         if dte <= EXIT_DTE:
-            return False, stats  # near expiration -> let smart-exit handle it
+            return stats  # near expiration -> let smart-exit handle it
         T = max(dte / 365.0, 0.001)
         net_delta = self.net_position_delta(spx_price, T, r, put_vol, call_vol)
 
@@ -428,16 +426,12 @@ class IronCondorTrade(Trade):
         elif abs(net_delta) > NET_DELTA_ROLL:
             stats['days_in_roll_zone'] = 1
             if net_delta > 0:
-                if self.roll_put_side(current_date, spx_price, T, RISK_FREE_RATE, put_vol, volatility):
+                if self.roll_put_side(current_date, spx_price, T, RISK_FREE_RATE, put_vol):
                     stats['put_rolls'] = 1
             else:
-                if self.roll_call_side(current_date, spx_price, T, RISK_FREE_RATE, call_vol, volatility):
+                if self.roll_call_side(current_date, spx_price, T, RISK_FREE_RATE, call_vol):
                     stats['call_rolls'] = 1
-        return True, stats
-
-    def can_roll(self) -> bool:
-        """Whether the trade can still roll (if it has a rolling plan)."""
-        return self.put_leg_open and self.call_leg_open
+        return stats
 
     def roll_stats(self) -> dict:
         return {

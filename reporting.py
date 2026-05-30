@@ -6,6 +6,7 @@ from config import *
 # OUTPUT
 # ============================================================================
 
+
 def print_results(results, years):
     print()
     print("=" * 80)
@@ -149,4 +150,3 @@ def export_trades_to_csv(results, filename):
                 res,
             ])
     print(f"  Trades exported to: {filename}")
-
