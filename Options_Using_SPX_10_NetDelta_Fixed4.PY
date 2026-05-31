@@ -103,6 +103,10 @@ class Fixed4Strategy(BaseStrategy):
         dates = [datetime.strptime(d, '%Y-%m-%d') for d in self.sorted_dates]
         return [d for d in dates if start_date <= d <= end_date]
 
+    def print_strategy_config(self):
+        print(f"  Strategy:    18/14 Delta Iron Condor on SPX  (wing ${WING_WIDTH})")
+        print(f"  Roll rule:   |net delta| > {NET_DELTA_ROLL}  (warn at +/-{NET_DELTA_WARN})")
+
     def get_market_data(self, trade, date_str) -> dict:
         bar        = self.spx_data.get(date_str, {})
         close      = bar.get('close', 0)

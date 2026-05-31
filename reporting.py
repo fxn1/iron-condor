@@ -150,3 +150,99 @@ def export_trades_to_csv(results, filename):
                 res,
             ])
     print(f"  Trades exported to: {filename}")
+
+# ============================================================================
+# STOCK-SPECIFIC REPORTING
+# ============================================================================
+
+def print_stock_results(results, years):
+    """Stock put spread report — calls all 4 stock-specific sections."""
+    _print_ticker_pnl(results)
+    _print_earnings_hit_rate(results)
+    _print_pnl_ranked(results)
+    _print_stock_yearly_breakdown(results, years)
+
+
+def _print_ticker_pnl(results):
+    """Per-ticker P&L breakdown: trades, wins, win rate, total PnL."""
+    print()
+    print("  PER-TICKER P&L BREAKDOWN")
+    print("  " + "-" * 60)
+    print(f"    {'Ticker':<8} {'Trades':<8} {'Wins':<6} {'Win%':<8} {'Total P&L'}")
+    print(f"    {'-'*8} {'-'*8} {'-'*6} {'-'*8} {'-'*12}")
+
+    by_ticker = {}
+    for t in results['closed_trades']:
+        ticker = getattr(t, 'ticker', 'SPX') or 'SPX'
+        by_ticker.setdefault(ticker, []).append(t)
+
+    for ticker in sorted(by_ticker):
+        ts  = by_ticker[ticker]
+        n   = len(ts)
+        w   = sum(1 for t in ts if t.pnl > 0)
+        wr  = w / n * 100 if n else 0
+        pnl = sum(t.pnl for t in ts) * 100 * results['num_contracts']
+        print(f"    {ticker:<8} {n:<8} {w:<6} {wr:<7.1f}% ${pnl:>10,.2f}")
+    print()
+
+
+def _print_earnings_hit_rate(results):
+    """How often scanner fired per ticker (trades entered vs calendar days scanned).
+    TODO: needs scanner_attempts per ticker passed in results to compute fully."""
+    print()
+    print("  EARNINGS HIT RATE")
+    print("  " + "-" * 60)
+    print("  [TODO: wire scanner_attempts per ticker into results dict]")
+    print()
+
+    by_ticker = {}
+    for t in results['closed_trades']:
+        ticker = getattr(t, 'ticker', 'SPX') or 'SPX'
+        by_ticker.setdefault(ticker, 0)
+        by_ticker[ticker] += 1
+
+    for ticker in sorted(by_ticker):
+        print(f"    {ticker:<8} {by_ticker[ticker]} trades entered")
+    print()
+
+
+def _print_pnl_ranked(results):
+    """Tickers ranked by total P&L descending."""
+    print()
+    print("  STOCKS BY P&L (RANKED)")
+    print("  " + "-" * 60)
+
+    by_ticker = {}
+    for t in results['closed_trades']:
+        ticker = getattr(t, 'ticker', 'SPX') or 'SPX'
+        by_ticker[ticker] = by_ticker.get(ticker, 0) + t.pnl * 100 * results['num_contracts']
+
+    ranked = sorted(by_ticker.items(), key=lambda x: -x[1])
+    for rank, (ticker, pnl) in enumerate(ranked, 1):
+        print(f"    {rank:<4} {ticker:<8} ${pnl:>10,.2f}")
+    print()
+
+
+def _print_stock_yearly_breakdown(results, years):
+    """Yearly breakdown per ticker — same structure as SPX yearly breakdown."""
+    print()
+    print("  YEARLY BREAKDOWN BY TICKER")
+    print("  " + "-" * 60)
+
+    by_year_ticker = {}
+    for t in results['closed_trades']:
+        ticker = getattr(t, 'ticker', 'SPX') or 'SPX'
+        year   = t.entry_date.year
+        by_year_ticker.setdefault(year, {}).setdefault(ticker, []).append(t)
+
+    for year in sorted(by_year_ticker):
+        print(f"    {year}")
+        print(f"      {'Ticker':<8} {'Trades':<8} {'Wins':<6} {'Win%':<8} {'P&L'}")
+        for ticker in sorted(by_year_ticker[year]):
+            ts  = by_year_ticker[year][ticker]
+            n   = len(ts)
+            w   = sum(1 for t in ts if t.pnl > 0)
+            wr  = w / n * 100 if n else 0
+            pnl = sum(t.pnl for t in ts) * 100 * results['num_contracts']
+            print(f"      {ticker:<8} {n:<8} {w:<6} {wr:<7.1f}% ${pnl:>10,.2f}")
+    print()

@@ -45,9 +45,11 @@ class TradeSignal:
 
 class BaseStrategy(ABC):
 
+    @abstractmethod
     def set_vix_data(self, vix_data):
         pass  # no-op default; override in strategies that need vix internally
 
+    @abstractmethod
     def set_spx_data(self, spx_data):
         pass    # no-op; override in strategies that need price data internally
 
@@ -67,6 +69,7 @@ class BaseStrategy(ABC):
     def mark_expiration_used(self, trade):
         raise NotImplementedError
 
+    @abstractmethod
     def mark_reentry_expiration_used(self, current_date):
         raise NotImplementedError
 
@@ -82,10 +85,22 @@ class BaseStrategy(ABC):
         Must include: close, high, low, open, vix, volatility, put_vol, call_vol"""
         raise NotImplementedError
 
+    @abstractmethod
     def check_expiration_used(self, current_date) -> bool:
         raise NotImplementedError
 
+    @abstractmethod
     def get_trading_dates(self, start_date, end_date) -> list:
         """Return sorted list of trading datetimes for the backtest period.
         Default: subclass must override or engine passes dates directly."""
         raise NotImplementedError
+
+    @abstractmethod
+    def print_strategy_config(self):
+        """Print strategy-specific config in the run banner."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def print_extra_results(self, results, years):
+        """Strategy-specific report section. Default: no-op."""
+        pass

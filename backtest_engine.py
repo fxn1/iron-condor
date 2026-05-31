@@ -32,7 +32,6 @@ def run_backtest(spx_data, start_date, end_date, strategy, run_title, capital_la
     Parameters
     ----------
     spx_data     : dict of daily SPX bars, keyed by 'YYYY-MM-DD' string.
-    vix_data     : dict of daily VIX bars, keyed by 'YYYY-MM-DD' string.
     start_date   : datetime of backtest start.
     end_date     : datetime of backtest end.
     strategy     : BaseStrategy — provides should_enter_trade() and
@@ -47,6 +46,7 @@ def run_backtest(spx_data, start_date, end_date, strategy, run_title, capital_la
     print("=" * 80)
     print()
     print(f"  Period:      {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
+    strategy.print_strategy_config()
     print(f"  {capital_label}")
     print(f"  Exits:       50% profit, 10 DTE smart exit, 2x stop  (gap-aware)")
     print()
@@ -292,6 +292,7 @@ def run_main(*, strategy, title, script_name, capital_label, csv_filename, extra
     results = run_backtest(spx_data, START_DATE, END_DATE, strategy, title, capital_label)
 
     print_results(results, years)
+    strategy.print_extra_results(results, years)  # ← stock sections; no-op for SPX
 
     csv_path = os.path.join(output_path, csv_filename)
     export_trades_to_csv(results, csv_path)

@@ -85,7 +85,7 @@ class StockPutSpreadStrategy(BaseStrategy):
             return 0.18
         df = self.price_data[ticker]
         hist = [float(df.loc[pd.Timestamp(d), 'Close']) for d in dates[idx - 20:idx + 1]]
-        return calculate_historical_volatility(hist)
+        return calculate_historical_volatility(hist) * STOCK_VOL_SCALAR
 
     # ── inherited functions called by backtest_engine
     # ── scan all tickers for today (called by stock engine, not SPX engine) ─
@@ -138,6 +138,16 @@ class StockPutSpreadStrategy(BaseStrategy):
         """stock strategy does not prevent multiple trades on same expiration date, since different tickers can have same expiration date.  Instead, check in scan_all_tickers() for each ticker + expiration combination."""
         return False   # stock strategy does not prevent multiple trades on same expiration date
 
+    def print_strategy_config(self):
+        print(f"  Strategy:    Stock Put Spread  (wing ${STOCK_WING_WIDTH}, {STOCK_TARGET_DTE} DTE)")
+        print(f"  Entry:       Day after earnings, EMA({SCAN_EMA_PERIOD}) up, RSI slope > {SCAN_RSI_SLOPE_MIN}")
+        print(f"  Support:     {SCAN_SUPPORT_LOOKBACK}-day rolling low, strike increment ${SCAN_STRIKE_INCREMENT}")
+        print(f"  Profit target: {int(STOCK_PROFIT_TARGET * 100)}%  Stop: {STOCK_STOP_LOSS_MULT}x credit")
+
+    def print_extra_results(self, results, years):
+        from reporting import print_stock_results
+        print_stock_results(results, years)
+
     # ── trade creation ────────────────────────────────────────────────────
 
     def create_trade(self, current_date, trade_id, signal: TradeSignal):
@@ -164,7 +174,7 @@ class StockPutSpreadStrategy(BaseStrategy):
             ticker            = ticker,
         )
 
-@staticmethod
+
 def _get_expiration(entry_date):
     """Next standard expiration approximately STOCK_TARGET_DTE days out."""
     target = entry_date + timedelta(days=STOCK_TARGET_DTE)

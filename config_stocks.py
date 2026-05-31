@@ -19,3 +19,4 @@ STOCK_WING_WIDTH      = 10     # $10 wide put spread
 STOCK_PROFIT_TARGET   = 0.15   # close at 15% of credit (mid of 10-25% range)
 STOCK_NUM_CONTRACTS   = 1      # contracts per trade
 STOCK_STOP_LOSS_MULT  = 2.0    # 2x credit stop loss (matches SPX convention)
+STOCK_VOL_SCALAR      = 0.80   # scale historical volatility to get more realistic option prices for stocks
