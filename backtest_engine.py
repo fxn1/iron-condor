@@ -12,7 +12,6 @@ Works for both SPX iron condor and stock put spread strategies.
 
 """
 
-import os
 from datetime import timedelta
 from config import *
 from base_strategy import TradeEntryReason
@@ -237,15 +236,13 @@ def run_main(*, strategy, title, script_name, csv_filename, start_date, delta_da
     print("=" * 80)
     print()
 
-    SCRIPT_DIR    = os.path.dirname(os.path.abspath(__file__))
-
     years   = delta_days / 365.25
     results = run_backtest(start_date, delta_days, strategy, title)
 
     print_results(results, years)
     strategy.print_extra_results(results, years)  # ← stock sections; no-op for SPX
 
-    csv_path = os.path.join(SCRIPT_DIR, csv_filename)
+    csv_path = os.path.join(OUTPUT_PATH, csv_filename)
     export_trades_to_csv(results, csv_path)
     print()
 

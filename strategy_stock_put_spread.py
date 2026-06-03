@@ -9,7 +9,6 @@ Extends BaseStrategy.  The stock backtest engine (backtest_engine_stocks.py)
 calls these methods; the SPX engine is untouched.
 """
 
-import os
 from datetime import timedelta, date
 import pandas as pd
 from backtest_engine import run_main
@@ -19,6 +18,7 @@ from CacheEarning import EarningsCache
 from volatility import calculate_historical_volatility
 from scanner import ScannerConfig, scan
 from put_spread import create_put_spread_from_scan
+from config import YF_DATA_PATH
 from config_stocks import *
 
 
@@ -75,12 +75,12 @@ class StockPutSpreadStrategy(BaseStrategy):
         sp500_list = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META', 'NVDA', 'TSLA', 'JPM', 'V', 'UNH']  # TODO: expand as needed
 
         print("  Loading stock price data...")
-        cache = CachedailyOHLCV(path=DATA_PATH, start_date=start_date, delta_days=delta_days)
+        cache = CachedailyOHLCV(path=YF_DATA_PATH, start_date=start_date, delta_days=delta_days)
         self.price_data = cache.download_list(sp500_list)
         print(f"  ✓ Loaded {len(self.price_data)} tickers")
 
         print("  Loading earnings data...")
-        earnings_cache = EarningsCache(path=DATA_PATH)
+        earnings_cache = EarningsCache(path=YF_DATA_PATH)
         self.earnings_data = {t: earnings_cache.get_earnings_dates(t) for t in sp500_list}
         print(f"  ✓ Loaded earnings for {len(self.earnings_data)} tickers")
 
@@ -217,10 +217,6 @@ def _get_expiration(entry_date):
     if friday <= entry_date:
         friday += timedelta(days=7)
     return friday
-
-
-SCRIPT_DIR     = os.path.dirname(os.path.abspath(__file__))
-DATA_PATH      = os.environ.get('YFDATA', os.path.join(SCRIPT_DIR, 'yfdatas'))
 
 
 if __name__ == "__main__":

@@ -51,8 +51,7 @@ class Fixed4Strategy(BaseStrategy):
 
     # BaseStrategy — unified interface engine calls
     def load_data(self, start_date, delta_days):
-        SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-        VIX_DATA_PATH = os.path.normpath(os.path.join(SCRIPT_DIR, 'VIX_Daily_Data.xlsx'))
+        VIX_DATA_PATH = os.path.normpath(os.path.join(DATA_PATH, 'VIX_Daily_Data.xlsx'))
 
         self.vix_data = None
         if os.path.exists(VIX_DATA_PATH):
@@ -60,7 +59,7 @@ class Fixed4Strategy(BaseStrategy):
             if self.vix_data:
                 print(f"  Loaded {len(self.vix_data)} days of VIX data")
         if self.vix_data is None:
-            print("  ERROR: VIX data not found")
+            print(f"  ERROR: VIX data not found {VIX_DATA_PATH}")
             return
         print()
 

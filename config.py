@@ -1,3 +1,12 @@
+import os
+
+# ============================================================================
+# PATH CONFIGURATION
+# ============================================================================
+SCRIPT_DIR    = os.path.dirname(os.path.abspath(__file__))
+YF_DATA_PATH  = os.environ.get('YFDATA', os.path.join(SCRIPT_DIR, 'yfdatas'))
+DATA_PATH     = os.environ.get('DATA', os.path.join(SCRIPT_DIR, 'datas'))
+OUTPUT_PATH     = os.environ.get('OUTPUT', os.path.join(SCRIPT_DIR, 'outputs'))
 
 # ============================================================================
 # CONFIGURATION

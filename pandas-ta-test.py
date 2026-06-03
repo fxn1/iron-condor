@@ -3,7 +3,7 @@ from datetime import date
 import pandas as pd
 import pandas_ta_classic as ta
 from CacheDailyOHLCV import CachedailyOHLCV
-
+from config import YF_DATA_PATH
 
 # support
 # find support/resistance with pivots
@@ -21,11 +21,9 @@ def find_support(close: pd.Series, lookback=20) -> float:
 # Option C — pandas-ta has pivot points (PDLP) which is closest to support
 # df.ta.pivots(append=True)   # adds S1, S2, S3 support columns
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-path = os.path.join(SCRIPT_DIR, 'yfdatas')
 START_DATE = date.fromisoformat("2025-06-01")
 delta_days = 365*30
-cache = CachedailyOHLCV(path, START_DATE, delta_days)  # instantiate first
+cache = CachedailyOHLCV(YF_DATA_PATH, START_DATE, delta_days)  # instantiate first
 df = cache.update_ticker('AAPL')
 # df = cache.get_ticker('AAPL')
 

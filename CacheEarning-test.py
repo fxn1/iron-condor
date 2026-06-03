@@ -1,10 +1,9 @@
-import os
 from datetime import timedelta, date
+from config import YF_DATA_PATH
 
 from CacheEarning import EarningsCache
 STOCK_UNIVERSE = ['GOOG', 'AAPL', 'MSFT']   # list, not string
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-earnings_cache = EarningsCache(path=os.path.join(SCRIPT_DIR, 'yfdatas'))
+earnings_cache = EarningsCache(path=YF_DATA_PATH)
 earnings_cache.download_list(STOCK_UNIVERSE)   # run once to populate
 
 # Then in the daily scan loop:

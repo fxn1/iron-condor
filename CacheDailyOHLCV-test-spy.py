@@ -7,6 +7,7 @@ import os
 import time
 from datetime import datetime, date
 from CacheDailyOHLCV import CachedailyOHLCV, get_spy_ticker_list
+from config import YF_DATA_PATH
 
 
 def get_old_files(cyf, path):
@@ -24,20 +25,16 @@ def get_old_files(cyf, path):
     cyf.download_list(old_files)
 
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-
-
 def run():
-    path = os.path.join(SCRIPT_DIR, 'yfdatas', ''),
     START_DATE = date.fromisoformat("2000-01-01")
     delta_days = 365*30
 
     sp500_list = get_spy_ticker_list()
-    cyf = CachedailyOHLCV(path, START_DATE, delta_days)
+    cyf = CachedailyOHLCV(YF_DATA_PATH, START_DATE, delta_days)
     print("{} start {} download".format(datetime.today(), "spy_list"))
     cyf.download_list(sp500_list)
 
-    get_old_files(cyf, path)
+    get_old_files(cyf, YF_DATA_PATH)
 
 
 if __name__ == '__main__':

@@ -5,9 +5,9 @@ import pandas as pd
 import glob
 import os
 import time
+from config import DATA_PATH
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-SPX_GLOB   = os.path.join(SCRIPT_DIR, 'spx_*.xlsx')
+SPX_GLOB   = os.path.join(DATA_PATH, 'spx_*.xlsx')
 
 # ============================================================================
 # DATA LOADING
