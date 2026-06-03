@@ -138,10 +138,10 @@ pip install -e .[dev]
 
 ## Suggested Next Steps
 
-1. Fix SPX startup data loading and add a clear zero-trade / failed-data-load error. (move input, output, data dir)
+1. ~~Fix SPX startup data loading and add a clear zero-trade / failed-data-load error. (move input, output, data dir)~~
 2. Add a data manifest explaining where each required `.xlsx` and cache file comes from.
-3. `strategy_stock_put_spread.py` passes a `datetime` into `scanner.scan()`, while earnings dates are plain `date` objects. That can prevent the earnings gate from matching.
-4. `reporting.py` and `backtest_engine.py` hardcode fixed concurrent trades as `5` in a few places instead of consistently using `CONCURRENT_TRADES`; the final summary margin also omits `NUM_CONTRACTS`. Centralize capital sizing so `CONCURRENT_TRADES` and `NUM_CONTRACTS` are used consistently. Replace hardcoded `5` capital multipliers with `CONCURRENT_TRADES`, and include `NUM_CONTRACTS` in the final summary margin calculation.
+3. ~~`strategy_stock_put_spread.py` passes a `datetime` into `scanner.scan()`, while earnings dates are plain `date` objects. That can prevent the earnings gate from matching.~~
+4. ~~`reporting.py` and `backtest_engine.py` hardcode fixed concurrent trades as `5` in a few places instead of consistently using `CONCURRENT_TRADES`; the final summary margin also omits `NUM_CONTRACTS`. Centralize capital sizing so `CONCURRENT_TRADES` and `NUM_CONTRACTS` are used consistently. Replace hardcoded `5` capital multipliers with `CONCURRENT_TRADES`, and include `NUM_CONTRACTS` in the final summary margin calculation.~~
 5. There are useful TODO comments in `scanner.py` noting that the EMA and RSI checks may be too simplistic, and that support-based strike selection should probably move toward delta-based pricing for better backtest realism. 
 6. `scanner.py` has several useful TODOs around improving trend detection and replacing support-only strike selection with delta-aware strike selection.
 7. Wire `Options_Using_SPX_10_NetDelta.PY` to a genuinely different trade factory if `IronCondorTradeOpen` is intended to be tested. 

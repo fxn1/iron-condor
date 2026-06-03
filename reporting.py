@@ -10,7 +10,7 @@ from config import *
 def print_results(results, years):
     print()
     print("=" * 80)
-    print("10-YEAR SPX BACKTEST RESULTS  (NET-DELTA + FIXED *5 CAPITAL)")
+    print(f"10-YEAR SPX BACKTEST RESULTS  (NET-DELTA + FIXED *{CONCURRENT_TRADES} CAPITAL)")
     print("=" * 80)
     print()
 
@@ -75,14 +75,14 @@ def print_results(results, years):
 
     avg_credit = sum(t.cumulative_credit for t in results['closed_trades']) / len(results['closed_trades'])
     margin_per = (WING_WIDTH - avg_credit) * 100
-    # Fixed capital sizing using the observed peak concurrent open trades = 5.
-    # (Reviewer originally asked for * 4, but tracking showed peak = 5.)
-    total_margin = margin_per * results['num_contracts'] * 5  # TODO: use config CONCURRENT_TRADES constant instead of hardcoding 5 here
+    # Fixed capital sizing using the observed peak concurrent open trades = CONCURRENT_TRADES.
+    # (Reviewer originally asked for * 4, but tracking showed peak = CONCURRENT_TRADES.)
+    total_margin = margin_per * results['num_contracts'] * CONCURRENT_TRADES
     annual_pnl = results['total_pnl_dollars'] / years
     roc = annual_pnl / total_margin * 100 if total_margin else 0
     print(f"    Avg Credit/Trade:       ${avg_credit:.2f} (incl. rolls)")
     print(f"    Margin per Contract:    ${margin_per:,.2f}")
-    print(f"    Concurrent Trades:      5  (fixed - matches observed peak)")
+    print(f"    Concurrent Trades:      {CONCURRENT_TRADES}  (fixed - matches observed peak)")
     print(f"    Peak Observed:          {results['max_concurrent']}  (informational)")
     print(f"    Total Capital Required: ${total_margin:,.2f}")
     print(f"    Annual P&L:             ${annual_pnl:,.2f}")

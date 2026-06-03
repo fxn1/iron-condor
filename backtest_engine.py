@@ -257,10 +257,10 @@ def run_main(*, strategy, title, script_name, csv_filename, start_date, delta_da
         return results
 
     avg_credit = sum(t.cumulative_credit for t in results['closed_trades']) / len(results['closed_trades'])
-    # Fixed capital sizing using the observed peak concurrent open trades = 5.
-    # (Original reviewer request was * 4, but tracking showed peak = 5, so
+    # Fixed capital sizing using the observed peak concurrent open trades = CONCURRENT_TRADES.
+    # (Original reviewer request was * 4, but tracking showed peak = CONCURRENT_TRADES, so
     # using 4 understates capital ~20% and overstates ROC ~25%.)
-    margin = (WING_WIDTH - avg_credit) * 100 * 5
+    margin = (WING_WIDTH - avg_credit) * 100 * CONCURRENT_TRADES
     annual_pnl = results['total_pnl_dollars'] / years
     roc        = annual_pnl / margin * 100 if margin else 0
 

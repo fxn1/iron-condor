@@ -152,7 +152,8 @@ class StockPutSpreadStrategy(BaseStrategy):
     def get_market_data(self, trade, date_str) -> dict:
         ticker     = trade.ticker
         df         = self.price_data[ticker]
-        row        = df.loc[pd.Timestamp(date_str)] if date_str in df.index else None
+        ts         = pd.Timestamp(date_str)
+        row        = df.loc[ts] if ts in df.index else None
         close      = float(row['Close']) if row is not None else 0.0
         volatility = self._volatility(ticker, date_str)
         return {
