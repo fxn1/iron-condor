@@ -24,8 +24,7 @@ class CachedailyOHLCV:
         df.index = df.index.map(self.strip_tz)
 
     def get_tickerfile(self, ticker):
-        dirname = os.path.dirname(self.path)
-        return os.path.join(dirname, ticker + '.csv')
+        return os.path.join(self.path, ticker + '.csv')
 
     def get_cache(self, ticker):
         filename = self.get_tickerfile(ticker)
@@ -43,9 +42,9 @@ class CachedailyOHLCV:
 
     # Creating a Function
     @staticmethod
-    def check_weekday(date):
+    def check_weekday(wkdate):
         # computing the parameter date with len function
-        res = len(pd.bdate_range(date, date))
+        res = len(pd.bdate_range(wkdate, wkdate))
         return res != 0
 
     def last_week_day(self):
@@ -97,21 +96,39 @@ class CachedailyOHLCV:
         return old_df
 
     def download_list(self, tickers):
-        df_list = []
+        df_list = {}
         ii = 0
         for ticker in tickers:
             if ticker.find(".") > 0:
                 ticker = ticker.replace(".", "-")
             df = self.update_ticker(ticker)
             df = df.loc[~df.index.duplicated(keep='first')]
-            df_list.append(df)
+            df_list[ticker] = df
             ii += 1
-        all_df = pd.concat(df_list, axis=1)
-        print("{} {} {} end download".format(datetime.today(), ii, len(all_df)))
-        return all_df
+        print("{} {} {} end download".format(datetime.today(), ii, len(df_list)))
+        return df_list
 
     def get_ticker(self, ticker):
         df = self.get_cache(ticker)
         # return latest data as UTC
         self.df_to_utc(df)
         return df
+
+
+def get_spy_ticker_list():
+    from io import StringIO
+    import requests
+    url = 'https://en.wikipedia.org/wiki/List_of_S%26P_500_companies'
+    try:
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+        html = requests.get(url, headers=headers).text
+        SnPwiki = pd.read_html(StringIO(html))
+        # pick columns 'ticker'
+        sp500 = SnPwiki[0].iloc[:, [0]]
+        sp500.columns = ['ticker']
+        sp500_list = sp500['ticker'].values.tolist()
+        print(f"sp500 rows {type(sp500_list)} with length {len(sp500_list)}")
+        return sp500_list
+    except Exception as e:
+        print(f"{datetime.today()} Failed to fetch S&P 500 list: {e}")
+        return []

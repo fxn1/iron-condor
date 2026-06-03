@@ -14,9 +14,7 @@ Works for both SPX iron condor and stock put spread strategies.
 
 import os
 from datetime import timedelta
-
 from config import *
-from data_loader import load_spx_daily_from_minute_files, load_vix_data_from_excel
 from base_strategy import TradeEntryReason
 from reporting import print_results, export_trades_to_csv
 
@@ -25,13 +23,12 @@ from reporting import print_results, export_trades_to_csv
 # BACKTEST ENGINE
 # ============================================================================
 
-def run_backtest(spx_data, start_date, end_date, strategy, run_title, capital_label):
+def run_backtest(start_date, end_date, strategy, run_title, capital_label):
     """
     Unified backtest loop.
 
     Parameters
     ----------
-    spx_data     : dict of daily SPX bars, keyed by 'YYYY-MM-DD' string.
     start_date   : datetime of backtest start.
     end_date     : datetime of backtest end.
     strategy     : BaseStrategy — provides should_enter_trade() and
@@ -104,7 +101,7 @@ def run_backtest(spx_data, start_date, end_date, strategy, run_title, capital_la
         # 3) Process closed trades and queue re-entries
         potential_reentries = []
         for trade in trades_to_close:
-            _fill_expiration_price(trade, spx_data, strategy)
+            strategy.fill_expiration_price(trade)
             open_trades.remove(trade)
             closed_trades.append(trade)
             signal = strategy.should_reenter_after_exit(trade)
@@ -214,28 +211,11 @@ def run_backtest(spx_data, start_date, end_date, strategy, run_title, capital_la
     }
 
 
-def _fill_expiration_price(trade, spx_data, strategy):
-    """Look up SPX price at expiration for reporting.  Falls back to exit price."""
-    if trade.spx_price_at_expiration is not None:
-        return
-    exp_str = trade.expiration_date.strftime('%Y-%m-%d')
-    if spx_data and exp_str in spx_data:
-        trade.spx_price_at_expiration = spx_data[exp_str]['close']
-        return
-    for offset in range(-3, 4):
-        chk = (trade.expiration_date + timedelta(days=offset)).strftime('%Y-%m-%d')
-        md  = strategy.get_market_data(trade, chk)
-        if md['close']:
-            trade.spx_price_at_expiration = md['close']
-            return
-    trade.spx_price_at_expiration = trade.spx_price_at_exit
-
-
 # ============================================================================
 # SHARED MAIN HELPER
 # ============================================================================
 
-def run_main(*, strategy, title, script_name, capital_label, csv_filename, extra_summary_lines=None):
+def run_main(*, strategy, title, script_name, capital_label, csv_filename, start_date, delta_days, extra_summary_lines=None):
     """
     Shared main() body.  Callers supply only what differs between variants.
 
@@ -246,6 +226,8 @@ def run_main(*, strategy, title, script_name, capital_label, csv_filename, extra
     script_name         : str  — printed under the banner
     capital_label       : str  — printed as the "Capital:" line in run_backtest banner
     csv_filename        : str  — output CSV filename (no path)
+    start_date         : datetime or None — if provided, overrides default backtest start date
+    delta_days         : int or None — if provided, backtest start date is end_date - delta_days
     extra_summary_lines : callable(results) -> list[str] | None — extra lines
                           inserted after the CAPITAL INVESTED row in the final
                           summary box.  Receives results so lines can reference
@@ -257,46 +239,32 @@ def run_main(*, strategy, title, script_name, capital_label, csv_filename, extra
     print(script_name)
     print("=" * 80)
     print()
-    print(f"  Underlying:    SPX (real 1-min data, resampled to daily)")
-    print(f"  Strategy:      18/14 delta IC, ${WING_WIDTH} wings, Monday entry, {TARGET_DTE} DTE")
-    print(f"  Roll rule:     |net delta| > {NET_DELTA_ROLL}  (warn at +/-{NET_DELTA_WARN})")
     print(f"  {capital_label}")
     print()
 
     SCRIPT_DIR    = os.path.dirname(os.path.abspath(__file__))
-    VIX_DATA_PATH = os.path.normpath(os.path.join(SCRIPT_DIR, 'VIX_Daily_Data.xlsx'))
-    output_path   = SCRIPT_DIR
 
-    vix_data = None
-    if os.path.exists(VIX_DATA_PATH):
-        vix_data = load_vix_data_from_excel(VIX_DATA_PATH)
-        if vix_data:
-            print(f"  Loaded {len(vix_data)} days of VIX data")
-    if vix_data is None:
-        print("  ERROR: VIX data not found")
-        return
-    print()
-
-    print("  Loading SPX minute data...")
-    spx_data = load_spx_daily_from_minute_files(START_YEAR, END_YEAR)
-    if spx_data is None:
-        print("  ERROR: could not load SPX data")
-        return
-    print(f"  Built {len(spx_data)} daily SPX bars")
-
-    # Inject vix_data into strategy — strategy owns its own vix lookups
-    strategy.set_vix_data(vix_data)
-    strategy.set_spx_data(spx_data)
-
-    years   = (END_DATE - START_DATE).days / 365.25
-    results = run_backtest(spx_data, START_DATE, END_DATE, strategy, title, capital_label)
+    end_date = start_date + timedelta(days=delta_days)
+    years   = delta_days / 365.25
+    strategy.load_data(start_date, delta_days)
+    results = run_backtest(start_date, end_date, strategy, title, capital_label)
 
     print_results(results, years)
     strategy.print_extra_results(results, years)  # ← stock sections; no-op for SPX
 
-    csv_path = os.path.join(output_path, csv_filename)
+    csv_path = os.path.join(SCRIPT_DIR, csv_filename)
     export_trades_to_csv(results, csv_path)
     print()
+
+    if not results['closed_trades']:
+        print("=" * 80)
+        print(f"FINAL SUMMARY - 10 YEAR SPX BACKTEST  ({title})")
+        print("=" * 80)
+        print()
+        print("  No trades were generated for this run.")
+        print("  Check the strategy date range, loaded market data, and entry filters.")
+        print()
+        return results
 
     avg_credit = sum(t.cumulative_credit for t in results['closed_trades']) / len(results['closed_trades'])
     # Fixed capital sizing using the observed peak concurrent open trades = 5.

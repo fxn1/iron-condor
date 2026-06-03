@@ -25,6 +25,9 @@ dependencies = [
 
     # ── technical indicators (pandas-ta) ─────────────────────────────────────
     "pandas-ta-classic>=0.3.14b",
+
+    # ── HTTP requests (for earnings date fetching) ─────────────────────────────
+    "requests>=2.28.0",   # ← add this
 ]
 
 [project.optional-dependencies]

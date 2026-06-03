@@ -17,7 +17,10 @@ Author: Claude (adapted for PEC)
 Date: May 2026
 ================================================================================
 """
+import os
+from datetime import timedelta, datetime
 from backtest_engine import run_main
+from data_loader import load_spx_daily_from_minute_files, load_vix_data_from_excel
 from base_strategy import BaseStrategy, get_next_friday, is_monday, TradeEntryReason, TradeSignal
 from volatility import calculate_historical_volatility
 from pricing import black_scholes_price, find_strike_for_delta
@@ -44,18 +47,32 @@ class Fixed4Strategy(BaseStrategy):
 
     # ── data injection (called by run_main after loading) ─────────────────
 
-    def set_vix_data(self, vix_data):
-        self.vix_data = vix_data
-
-    def set_spx_data(self, spx_data):
-        self.spx_data     = spx_data
-        self.sorted_dates = sorted(spx_data.keys())
-
-    # ── internal helpers ──────────────────────────────────────────────────
-
     # ── BaseStrategy interface ────────────────────────────────────────────
 
     # BaseStrategy — unified interface engine calls
+    def load_data(self, start_date, delta_days):
+        SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+        VIX_DATA_PATH = os.path.normpath(os.path.join(SCRIPT_DIR, 'VIX_Daily_Data.xlsx'))
+
+        self.vix_data = None
+        if os.path.exists(VIX_DATA_PATH):
+            self.vix_data = load_vix_data_from_excel(VIX_DATA_PATH)
+            if self.vix_data:
+                print(f"  Loaded {len(self.vix_data)} days of VIX data")
+        if self.vix_data is None:
+            print("  ERROR: VIX data not found")
+            return
+        print()
+
+        print("  Loading SPX minute data...")
+        end_date = start_date + timedelta(days=delta_days)
+        self.spx_data = load_spx_daily_from_minute_files(start_date.year, end_date.year)
+        if self.spx_data is None:
+            print("  ERROR: could not load SPX data")
+            return
+        self.sorted_dates = sorted(self.spx_data.keys())
+        print(f"  Built {len(self.spx_data)} daily SPX bars")
+
     def should_enter_trades(self, current_date) -> list[TradeSignal]:
         return [self.should_enter_trade(current_date)]
 
@@ -64,63 +81,11 @@ class Fixed4Strategy(BaseStrategy):
             return TradeSignal(reason=TradeEntryReason.SHOULD_ENTER)
         return TradeSignal(reason=TradeEntryReason.SKIPPED_VIX)
 
-    def should_enter_trade(self, current_date) -> TradeSignal:
-        if not is_monday(current_date):
-            return TradeSignal(reason=TradeEntryReason.NOT_MONDAY)
-        if self._vix(current_date) > VIX_NO_TRADE:
-            return TradeSignal(reason=TradeEntryReason.SKIPPED_VIX)
-        if self._exp_key(current_date) in self.used_expirations:
-            return TradeSignal(reason=TradeEntryReason.SKIPPED_DUP_EXP)
-        return TradeSignal(reason=TradeEntryReason.SHOULD_ENTER)
-
-    def _vix(self, current_date):
-        # TODO: fix caller
-        date_str = current_date if isinstance(current_date, str) else current_date.strftime('%Y-%m-%d')
-        return self.vix_data[date_str]['close'] if date_str in self.vix_data else 18.0
-
-    @staticmethod
-    def _exp_key(current_date):
-        return get_next_friday(current_date, TARGET_DTE).strftime('%Y-%m-%d')
-
     def mark_expiration_used(self, trade):
         self.used_expirations.add(trade.expiration_date.strftime('%Y-%m-%d'))
 
     def mark_reentry_expiration_used(self, current_date):
         self.used_expirations.add(self._exp_key(current_date))
-
-    def check_expiration_used(self, current_date) -> bool:
-        return self._exp_key(current_date) in self.used_expirations
-
-    def _volatility(self, date_str) -> float:
-        idx = self.sorted_dates.index(date_str) if date_str in self.sorted_dates else -1
-        if idx >= 20:
-            hist = [self.spx_data[d]['close'] for d in self.sorted_dates[idx - 20:idx + 1]]
-            return calculate_historical_volatility(hist)
-        return 0.18
-
-    def get_trading_dates(self, start_date, end_date) -> list:
-        from datetime import datetime
-        dates = [datetime.strptime(d, '%Y-%m-%d') for d in self.sorted_dates]
-        return [d for d in dates if start_date <= d <= end_date]
-
-    def print_strategy_config(self):
-        print(f"  Strategy:    18/14 Delta Iron Condor on SPX  (wing ${WING_WIDTH})")
-        print(f"  Roll rule:   |net delta| > {NET_DELTA_ROLL}  (warn at +/-{NET_DELTA_WARN})")
-
-    def get_market_data(self, trade, date_str) -> dict:
-        bar        = self.spx_data.get(date_str, {})
-        close      = bar.get('close', 0)
-        volatility = self._volatility(date_str)
-        return {
-            'close':      close,
-            'high':       bar.get('high',  close),
-            'low':        bar.get('low',   close),
-            'open':       bar.get('open',  close),
-            'vix':        self._vix(date_str),
-            'volatility': volatility,
-            'put_vol':    volatility * 1.10,
-            'call_vol':   volatility * 0.95,
-        }
 
     def create_trade(self, current_date, trade_id, signal: TradeSignal):
         date_str   = current_date.strftime('%Y-%m-%d')
@@ -159,14 +124,90 @@ class Fixed4Strategy(BaseStrategy):
             trade_id=trade_id,
         )
 
+    def get_market_data(self, trade, date_str) -> dict:
+        bar        = self.spx_data.get(date_str, {})
+        close      = bar.get('close', 0)
+        volatility = self._volatility(date_str)
+        return {
+            'close':      close,
+            'high':       bar.get('high',  close),
+            'low':        bar.get('low',   close),
+            'open':       bar.get('open',  close),
+            'vix':        self._vix(date_str),
+            'volatility': volatility,
+            'put_vol':    volatility * 1.10,
+            'call_vol':   volatility * 0.95,
+        }
+
+    def get_trading_dates(self, start_date, end_date) -> list:
+        from datetime import datetime
+        dates = [datetime.strptime(d, '%Y-%m-%d') for d in self.sorted_dates]
+        return [d for d in dates if start_date <= d <= end_date]
+
+    def print_strategy_config(self):
+        print(f"  Underlying:    SPX (real 1-min data, resampled to daily)")
+        print(f"  Strategy:      18/14 delta IC, ${WING_WIDTH} wings, Monday entry, {TARGET_DTE} DTE")
+        print(f"  Roll rule:     |net delta| > {NET_DELTA_ROLL}  (warn at +/-{NET_DELTA_WARN})")
+
+    def print_extra_results(self, results, years):
+        pass
+
+    def check_expiration_used(self, current_date) -> bool:
+        return self._exp_key(current_date) in self.used_expirations
+
+    def fill_expiration_price(self, trade):
+        """Look up SPX price at expiration for reporting.  Falls back to exit price."""
+        if trade.spx_price_at_expiration is not None:
+            return
+        exp_str = trade.expiration_date.strftime('%Y-%m-%d')
+        if self.spx_data and exp_str in self.spx_data:
+            trade.spx_price_at_expiration = self.spx_data[exp_str]['close']
+            return
+        for offset in range(-3, 4):
+            chk = (trade.expiration_date + timedelta(days=offset)).strftime('%Y-%m-%d')
+            md = self.get_market_data(trade, chk)
+            if md['close']:
+                trade.spx_price_at_expiration = md['close']
+                return
+        trade.spx_price_at_expiration = trade.spx_price_at_exit
+
+    def should_enter_trade(self, current_date) -> TradeSignal:
+        if not is_monday(current_date):
+            return TradeSignal(reason=TradeEntryReason.NOT_MONDAY)
+        if self._vix(current_date) > VIX_NO_TRADE:
+            return TradeSignal(reason=TradeEntryReason.SKIPPED_VIX)
+        if self._exp_key(current_date) in self.used_expirations:
+            return TradeSignal(reason=TradeEntryReason.SKIPPED_DUP_EXP)
+        return TradeSignal(reason=TradeEntryReason.SHOULD_ENTER)
+
+    def _vix(self, current_date):
+        # TODO: fix caller
+        date_str = current_date if isinstance(current_date, str) else current_date.strftime('%Y-%m-%d')
+        return self.vix_data[date_str]['close'] if date_str in self.vix_data else 18.0
+
+    @staticmethod
+    def _exp_key(current_date):
+        return get_next_friday(current_date, TARGET_DTE).strftime('%Y-%m-%d')
+
+    def _volatility(self, date_str) -> float:
+        idx = self.sorted_dates.index(date_str) if date_str in self.sorted_dates else -1
+        if idx >= 20:
+            hist = [self.spx_data[d]['close'] for d in self.sorted_dates[idx - 20:idx + 1]]
+            return calculate_historical_volatility(hist)
+        return 0.18
+
 
 if __name__ == "__main__":
+    strategy = Fixed4Strategy()
+
     run_main(
-        strategy      = Fixed4Strategy(),
+        strategy      = strategy,
         title         = "NET-DELTA + FIXED *5 CAPITAL",
         script_name   = "Options_Using_SPX_10_NetDelta_Fixed4.PY",
         capital_label = f"Capital:      fixed assumption of {CONCURRENT_TRADES} concurrent trades",
         csv_filename  = "SPX_IronCondor_10Year_NetDelta_Fixed4_Backtest.csv",
+        start_date   = datetime(2016, 5, 9),
+        delta_days   = 365*10,
         extra_summary_lines = lambda r: [
             f"  |{'(fixed {} concurrent)'.format(CONCURRENT_TRADES):^30}"
             f"{'peak obs: {}'.format(r['max_concurrent']):^30}|",

@@ -67,6 +67,12 @@ def print_results(results, years):
 
     print("  CAPITAL ANALYSIS")
     print("  " + "-" * 60)
+    if not results['closed_trades']:
+        print("    No closed trades. Capital, ROC, and yearly breakdown are not available.")
+        print("    Check the strategy date range, loaded market data, and scanner entry filters.")
+        print()
+        return
+
     avg_credit = sum(t.cumulative_credit for t in results['closed_trades']) / len(results['closed_trades'])
     margin_per = (WING_WIDTH - avg_credit) * 100
     # Fixed capital sizing using the observed peak concurrent open trades = 5.
