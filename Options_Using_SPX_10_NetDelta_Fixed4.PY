@@ -148,6 +148,7 @@ class Fixed4Strategy(BaseStrategy):
         print(f"  Underlying:    SPX (real 1-min data, resampled to daily)")
         print(f"  Strategy:      18/14 delta IC, ${WING_WIDTH} wings, Monday entry, {TARGET_DTE} DTE")
         print(f"  Roll rule:     |net delta| > {NET_DELTA_ROLL}  (warn at +/-{NET_DELTA_WARN})")
+        print(f"  Capital:       fixed assumption of {CONCURRENT_TRADES} concurrent trades")
 
     def print_extra_results(self, results, years):
         pass
@@ -202,9 +203,8 @@ if __name__ == "__main__":
 
     run_main(
         strategy      = strategy,
-        title         = "NET-DELTA + FIXED *5 CAPITAL",
+        title         = "SPX BACKTEST NET-DELTA + FIXED *5 CAPITAL",
         script_name   = "Options_Using_SPX_10_NetDelta_Fixed4.PY",
-        capital_label = f"Capital:      fixed assumption of {CONCURRENT_TRADES} concurrent trades",
         csv_filename  = "SPX_IronCondor_10Year_NetDelta_Fixed4_Backtest.csv",
         start_date   = datetime(2016, 5, 9),
         delta_days   = 365*10,

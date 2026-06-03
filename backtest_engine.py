@@ -23,34 +23,33 @@ from reporting import print_results, export_trades_to_csv
 # BACKTEST ENGINE
 # ============================================================================
 
-def run_backtest(start_date, end_date, strategy, run_title, capital_label):
+def run_backtest(start_date, delta_days, strategy, run_title):
     """
     Unified backtest loop.
 
     Parameters
     ----------
     start_date   : datetime of backtest start.
-    end_date     : datetime of backtest end.
+    delta_days   : int - backtest end date is start date + delta_days
     strategy     : BaseStrategy — provides should_enter_trade() and
                    should_reenter_after_exit().  All entry/re-entry policy
                    lives there; this function is policy-free.
     run_title    : str printed in the opening banner.
-    capital_label: str printed as the "Capital:" line in the banner.
     """
+    end_date = start_date + timedelta(days=delta_days + 1)  # +1 to include the last day in the loop
+    strategy.load_data(start_date, delta_days)
     print()
     print("=" * 80)
-    print(f"RUNNING 10-YEAR SPX BACKTEST  ({run_title})")
+    print(f"RUNNING 10-YEAR ({run_title})")
     print("=" * 80)
     print()
-    print(f"  Period:      {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
+    print(f"  Period:       {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
     strategy.print_strategy_config()
-    print(f"  {capital_label}")
     print(f"  Exits:       50% profit, 10 DTE smart exit, 2x stop  (gap-aware)")
     print()
 
     open_trades   = []
     closed_trades = []
-
     dates = strategy.get_trading_dates(start_date, end_date)
 
     trade_id              = 0
@@ -215,7 +214,7 @@ def run_backtest(start_date, end_date, strategy, run_title, capital_label):
 # SHARED MAIN HELPER
 # ============================================================================
 
-def run_main(*, strategy, title, script_name, capital_label, csv_filename, start_date, delta_days, extra_summary_lines=None):
+def run_main(*, strategy, title, script_name, csv_filename, start_date, delta_days, extra_summary_lines=None):
     """
     Shared main() body.  Callers supply only what differs between variants.
 
@@ -224,10 +223,9 @@ def run_main(*, strategy, title, script_name, capital_label, csv_filename, start
     strategy            : BaseStrategy instance
     title               : str  — banner title, e.g. "NET-DELTA ROLL MANAGEMENT"
     script_name         : str  — printed under the banner
-    capital_label       : str  — printed as the "Capital:" line in run_backtest banner
     csv_filename        : str  — output CSV filename (no path)
     start_date         : datetime or None — if provided, overrides default backtest start date
-    delta_days         : int or None — if provided, backtest start date is end_date - delta_days
+    delta_days         : int - backtest end date is start date + delta_days
     extra_summary_lines : callable(results) -> list[str] | None — extra lines
                           inserted after the CAPITAL INVESTED row in the final
                           summary box.  Receives results so lines can reference
@@ -235,19 +233,14 @@ def run_main(*, strategy, title, script_name, capital_label, csv_filename, start
     """
     print()
     print("=" * 80)
-    print(f"SPX IRON CONDOR - 10 YEAR BACKTEST  ({title})")
     print(script_name)
     print("=" * 80)
-    print()
-    print(f"  {capital_label}")
     print()
 
     SCRIPT_DIR    = os.path.dirname(os.path.abspath(__file__))
 
-    end_date = start_date + timedelta(days=delta_days)
     years   = delta_days / 365.25
-    strategy.load_data(start_date, delta_days)
-    results = run_backtest(start_date, end_date, strategy, title, capital_label)
+    results = run_backtest(start_date, delta_days, strategy, title)
 
     print_results(results, years)
     strategy.print_extra_results(results, years)  # ← stock sections; no-op for SPX

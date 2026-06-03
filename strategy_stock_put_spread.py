@@ -186,6 +186,7 @@ class StockPutSpreadStrategy(BaseStrategy):
         print(f"  Entry:       Day after earnings, EMA({SCAN_EMA_PERIOD}) up, RSI slope > {SCAN_RSI_SLOPE_MIN}")
         print(f"  Support:     {SCAN_SUPPORT_LOOKBACK}-day rolling low, strike increment ${SCAN_STRIKE_INCREMENT}")
         print(f"  Profit target: {int(STOCK_PROFIT_TARGET * 100)}%  Stop: {STOCK_STOP_LOSS_MULT}x credit")
+        print(f"  Capital:      ")
 
     def print_extra_results(self, results, years):
         from reporting import print_stock_results
@@ -233,10 +234,9 @@ if __name__ == "__main__":
         strategy      = strategy,
         title         = "PUT SPREAD ON STOCKS",
         script_name   = "Options_Using_SPX_10_NetDelta_Fixed4.py",  # for consistent naming in reports
-        capital_label = f"Capital:      ",
         csv_filename  = "Stock_Put_Spread_10Year_Backtest.csv",
         start_date    = BACKTEST_START_DATE,
-        delta_days=fix_delta_days,
+        delta_days    =fix_delta_days,
         extra_summary_lines = lambda r: [
             f"total trades: {r['total_trades']:^22}|",
             f"win rate:     {r['win_rate']:^22.2%}|",
