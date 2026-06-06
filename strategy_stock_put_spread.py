@@ -37,7 +37,7 @@ class StockPutSpreadStrategy(BaseStrategy):
         self.price_data      = {}
         self.earnings_data   = {}
         self.used_expirations = set()
-        self.sorted_dates     = {}    # {ticker: [date_str, ...]}
+        self.sorted_dates     = {}    # {ticker: [sorted list of dates in price_data]}
         self.cfg           = ScannerConfig(
             earnings_lookahead_days        = SCAN_EARNINGS_LOOKAHEAD_DAYS,
             ema_period                     = SCAN_EMA_PERIOD,
@@ -52,28 +52,28 @@ class StockPutSpreadStrategy(BaseStrategy):
 
     # ── BaseStrategy: ───────────────────
 
-    def _price(self, ticker, date_str) -> float:
+    def _price(self, ticker, ts: pd.Timestamp) -> float:
         df = self.price_data[ticker]
-        ts = pd.Timestamp(date_str)
         return float(df.loc[ts, 'Close']) if ts in df.index else 0.0
 
-    def _volatility(self, ticker, date_str) -> float:
+    def _volatility(self, ticker, ts: pd.Timestamp) -> float:
         dates = self.sorted_dates.get(ticker, [])
-        if date_str not in dates:
-            return 0.18
-        idx = dates.index(date_str)
-        if idx < 20:
-            return 0.18
-        df = self.price_data[ticker]
-        hist = [float(df.loc[pd.Timestamp(d), 'Close']) for d in dates[idx - 20:idx + 1]]
-        return calculate_historical_volatility(hist) * STOCK_VOL_SCALAR
+        if ts not in dates:
+            return -1
+        idx = dates.index(ts)
+        if idx >= 20:
+            df = self.price_data[ticker]
+            window = dates[idx - 20: idx + 1]
+            hist = [float(df.loc[d, 'Close']) for d in window]
+            return calculate_historical_volatility(hist) * STOCK_VOL_SCALAR
+        return 0.18
 
     # ── BaseStrategy interface ────────────────────────────────────────────
     # ── inherited functions called by backtest_engine
     def load_data(self, start_date, delta_days):
         sp500_list = get_spy_ticker_list()
         sp500_list = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META', 'NVDA', 'TSLA', 'JPM', 'V', 'UNH']  # TODO: expand as needed
-
+        sp500_list = ['AAPL']  # TODO for testing
         print("  Loading stock price data...")
         cache = CachedailyOHLCV(path=YF_DATA_PATH, start_date=start_date, delta_days=delta_days)
         self.price_data = cache.download_list(sp500_list)
@@ -86,7 +86,7 @@ class StockPutSpreadStrategy(BaseStrategy):
 
         # precompute sorted date lists per ticker for vol lookback
         for ticker, df in self.price_data.items():
-            self.sorted_dates[ticker] = sorted(df.index.strftime('%Y-%m-%d').tolist())
+            self.sorted_dates[ticker] = sorted(df.index.normalize().tolist())
 
     # ── scan all tickers for today (called by stock engine, not SPX engine) ─
     def should_enter_trades(self, current_date) -> list[TradeSignal]:
@@ -96,16 +96,14 @@ class StockPutSpreadStrategy(BaseStrategy):
         expiration is not already in used_expirations.
         Called by backtest_engine_stocks.py instead of should_enter_trade().
         """
-        date_str = current_date.strftime('%Y-%m-%d')
-        current_day = current_date.date()
         signals = []
         for ticker, price_df in self.price_data.items():
             earnings_dates = self.earnings_data.get(ticker, [])
-            if pd.Timestamp(date_str) not in price_df.index:
+            if current_date not in price_df.index:
                 continue
-            entered, strike = scan(current_day, price_df, earnings_dates, self.cfg)
+            entered, strike = scan(current_date, price_df, earnings_dates, self.cfg)
             if entered:
-                exp_key = (ticker, _get_expiration(current_date).strftime('%Y-%m-%d'))
+                exp_key = (ticker, _get_expiration(current_date))
                 if exp_key not in self.used_expirations:
                     signals.append(TradeSignal(reason=TradeEntryReason.SHOULD_ENTER, ticker=ticker, strike=strike))
                 else:
@@ -119,8 +117,7 @@ class StockPutSpreadStrategy(BaseStrategy):
         return TradeSignal(reason=TradeEntryReason.SKIPPED_VIX)
 
     def mark_expiration_used(self, trade):
-        exp_key = (trade.ticker, trade.expiration_date.strftime('%Y-%m-%d'))
-        self.used_expirations.add(exp_key)
+        self.used_expirations.add((trade.ticker, trade.expiration_date))
 
     def mark_reentry_expiration_used(self, current_date):
         pass  # no re-entry for stocks
@@ -131,9 +128,8 @@ class StockPutSpreadStrategy(BaseStrategy):
         Called by backtest_engine_stocks.py after scan_all_tickers() signals.
         """
         ticker = signal.ticker
-        date_str = current_date.strftime('%Y-%m-%d')
-        price = self._price(ticker, date_str)
-        volatility = self._volatility(ticker, date_str)
+        price = self._price(ticker, current_date)
+        volatility = self._volatility(ticker, current_date)
         expiration = _get_expiration(current_date)
         return create_put_spread_from_scan(
             entry_date        = current_date,
@@ -149,13 +145,12 @@ class StockPutSpreadStrategy(BaseStrategy):
             ticker            = ticker,
         )
 
-    def get_market_data(self, trade, date_str) -> dict:
+    def get_market_data(self, trade, ts: pd.Timestamp) -> dict:
         ticker     = trade.ticker
         df         = self.price_data[ticker]
-        ts         = pd.Timestamp(date_str)
         row        = df.loc[ts] if ts in df.index else None
         close      = float(row['Close']) if row is not None else 0.0
-        volatility = self._volatility(ticker, date_str)
+        volatility = self._volatility(ticker, ts)
         return {
             'close':      close,
             'high':       float(row['High'])  if row is not None else close,
@@ -172,14 +167,8 @@ class StockPutSpreadStrategy(BaseStrategy):
         return False   # stock strategy does not prevent multiple trades on same expiration date
 
     def get_trading_dates(self, start_date, end_date) -> list:
-        from datetime import datetime, time
-        # TODO: get rid of isinsrance
-        if not isinstance(start_date, datetime):
-            start_date = datetime.combine(start_date, time.min)
-        if not isinstance(end_date, datetime):
-            end_date = datetime.combine(end_date, time.max)
-        first = next(iter(self.sorted_dates.values()))
-        dates = [datetime.strptime(d, '%Y-%m-%d') for d in first]
+        sorted_dates = next(iter(self.sorted_dates.values()))
+        dates = [date.fromisoformat(d) for d in sorted_dates]
         return [d for d in dates if start_date <= d <= end_date]
 
     def print_strategy_config(self):
@@ -222,7 +211,7 @@ def _get_expiration(entry_date):
 
 if __name__ == "__main__":
     BACKTEST_START_DATE = date.fromisoformat("2000-01-01")
-    BACKTEST_START_DATE = date.today() - timedelta(days=3)
+    BACKTEST_START_DATE = date.today() - timedelta(days=365)
     fix_delta_days = 365*4
 
     strategy = StockPutSpreadStrategy()

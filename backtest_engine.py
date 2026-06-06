@@ -12,7 +12,7 @@ Works for both SPX iron condor and stock put spread strategies.
 
 """
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 from config import *
 from base_strategy import TradeEntryReason
 from reporting import print_results, export_trades_to_csv
@@ -36,6 +36,15 @@ def run_backtest(start_date, delta_days, strategy, run_title):
     run_title    : str printed in the opening banner.
     """
     end_date = start_date + timedelta(days=delta_days + 1)  # +1 to include the last day in the loop
+    today = datetime.today()
+    if end_date < start_date:
+        raise ValueError("End date must be after start date.")
+    if start_date > today:
+        raise ValueError("Start date cannot be in the future.")
+    if end_date < today:
+        print(f"  Backtest end date: {end_date.strftime('%Y-%m-%d')}")
+    if end_date > today:
+        end_date = today
     strategy.load_data(start_date, delta_days)
     print()
     print("=" * 80)
@@ -66,11 +75,9 @@ def run_backtest(start_date, delta_days, strategy, run_title):
     print("  Running backtest...")
 
     for current_date in dates:
-        date_str = current_date.strftime('%Y-%m-%d')
-
         trades_to_close = []
         for trade in open_trades:
-            md = strategy.get_market_data(trade, date_str)
+            md = strategy.get_market_data(trade, current_date)
             close       = md['close']
             day_high    = md['high']
             day_low     = md['low']
@@ -86,7 +93,7 @@ def run_backtest(start_date, delta_days, strategy, run_title):
             # 2) Net-delta roll management for trades that survived the exits
             if not trade.is_open:
                 continue
-            md = strategy.get_market_data(trade, date_str)
+            md = strategy.get_market_data(trade, current_date)
             close       = md['close']
             put_vol     = md['put_vol']
             call_vol    = md['call_vol']
@@ -140,8 +147,7 @@ def run_backtest(start_date, delta_days, strategy, run_title):
 
     # Force-close anything still open at end of period
     for trade in open_trades:
-        last_str  = dates[-1].strftime('%Y-%m-%d')
-        md = strategy.get_market_data(trade, last_str)
+        md = strategy.get_market_data(trade, dates[-1])
         spx_price = md['close']
         trade._close_at_expiration(spx_price)
         closed_trades.append(trade)

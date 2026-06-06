@@ -4,6 +4,8 @@ from datetime import timedelta
 from enum import Enum
 from typing import Optional
 
+import pandas as pd
+
 
 # ============================================================================
 # DATE HELPERS
@@ -75,7 +77,7 @@ class BaseStrategy(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_market_data(self, trade, date_str) -> dict:
+    def get_market_data(self, trade, ts: pd.Timestamp) -> dict:
         """Return market data needed by the engine for an open trade today.
         Must include: close, high, low, open, vix, volatility, put_vol, call_vol"""
         raise NotImplementedError

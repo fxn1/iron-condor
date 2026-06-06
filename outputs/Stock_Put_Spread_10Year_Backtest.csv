@@ -1,0 +1,1 @@
+Trade_ID,Entry_Date,Expiration,Exit_Date,DTE,SPX_Entry,SPX_Exit,SPX_Expiration,VIX_Entry,PUT_Short_Final,PUT_Long_Final,PUT_Credit_Final,PUT_Rolls,PUT_Exit,CALL_Short_Final,CALL_Long_Final,CALL_Credit_Final,CALL_Rolls,CALL_Exit,Cumulative_Credit_$,Banked_Roll_PnL_$,Total_PnL_$,PnL_%,Exit_Reason,Result

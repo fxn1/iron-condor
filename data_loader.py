@@ -51,7 +51,7 @@ def load_one_file(path):
     }).dropna()
     daily = {}
     for idx, row in daily_df.iterrows():
-        daily[idx.strftime('%Y-%m-%d')] = {
+        daily[idx.normalize()] = {  # Normalize idx to remove the time part
             'open': float(row['Open']), 'high': float(row['High']),
             'low': float(row['Low']), 'close': float(row['Close']),
         }
@@ -111,7 +111,7 @@ def load_vix_data_from_excel(filepath):
         out = {}
         for _, row in df.iterrows():
             if pd.notna(row.get('date')):
-                key = pd.to_datetime(row['date']).strftime('%Y-%m-%d')
+                key = pd.Timestamp(row['date']).normalize()
                 close = row.get('close', row.get('adj close', 18.0))
                 out[key] = {'close': float(close)}
         return out

@@ -4,11 +4,12 @@ C:\Neeraj\backup\tech\systematicinv\iron-condor\venv\Scripts\python.exe C:\Neera
 Options_Using_SPX_10_NetDelta_Fixed4.PY
 ================================================================================
 
+  Backtest end date: 2026-05-08
   Loaded 2602 days of VIX data
 
   Loading SPX minute data...
-  loaded spx_2016.xlsx: 98,356 bars -> 252 days
   loaded spx_2017.xlsx: 97,815 bars -> 251 days
+  loaded spx_2016.xlsx: 98,356 bars -> 252 days
   loaded spx_2018.xlsx: 97,649 bars -> 251 days
   loaded spx_2019.xlsx: 98,037 bars -> 252 days
   loaded spx_2020.xlsx: 98,604 bars -> 253 days
@@ -18,7 +19,7 @@ Options_Using_SPX_10_NetDelta_Fixed4.PY
   loaded spx_2024.xlsx: 97,976 bars -> 252 days
   loaded spx_2025.xlsx: 97,273 bars -> 250 days
   loaded spx_2026.xlsx: 7,429 bars -> 19 days
-  TOTAL: 986,885 minute bars / 2533 trading days.  in 100.99s
+  TOTAL: 986,885 minute bars / 2533 trading days.  in 39.40s
   Built 2533 daily SPX bars
 
 ================================================================================

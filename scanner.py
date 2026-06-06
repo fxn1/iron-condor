@@ -54,24 +54,60 @@ DEFAULT_CONFIG = ScannerConfig()
 # ============================================================================
 # INDICATOR HELPERS
 # ============================================================================
+def trend_period(ema, window_len) -> float:
+    window = ema.iloc[-window_len:]
+    x = pd.Series(range(len(window)), index=window.index)
+    return window.cov(x) / x.var()  # slope of EMA over the window
 
-# TODO: that may not capture trend up.
-# what if price goes up after ema_trend_days and is now trending down but ema is still below ema_trend_days ago?
-def _ema_trending_up(close: pd.Series, cfg: ScannerConfig) -> bool:
-    """EMA(period) today is higher than it was ema_trend_days ago."""
+
+def _ema_trending_up(close: pd.Series, cfg: ScannerConfig) -> float:
+    """
+    EMA is in an upward trend, allowing noise/dips inside the lookback.
+    handles he case of price goes up after ema_trend_days and is now trending down but ema is still below ema_trend_days ago
+    """
     ema = ta.ema(close, length=cfg.ema_period)
-    if ema is None or len(ema.dropna()) < cfg.ema_trend_days + 1:
-        return False
-    return ema.iloc[-1] > ema.iloc[-1 - cfg.ema_trend_days]
+    if ema is None:
+        return 0.0
+
+    ema = ema.dropna()
+    window_len = cfg.ema_trend_days + 1
+    if len(ema) < window_len:
+        return 0.0
+
+    # 1. overall slope over lookback period must be positive
+    slope = ema.iloc[-1] > ema.iloc[-1 - cfg.ema_trend_days]
+
+    # 2. EMA must be trending up over the lookback period, allowing for noise/dips
+    overall_slope = trend_period(ema, window_len)
+
+    # 3. recent slope over half the lookback period must also be positive to avoid old uptrend that's now reversing
+    recent_slope = trend_period(ema, max(3, window_len // 2))
+    return slope and overall_slope > 0 and recent_slope > 0
 
 
-# single point check not enough. see description in _ema_trending_up. also, what if ema is flat?
+# similar trend check as _ema_trending_up.?
 def _rsi_slope(close: pd.Series, cfg: ScannerConfig) -> float:
     """Slope of RSI(period) over last rsi_slope_days days."""
     rsi = ta.rsi(close, length=cfg.rsi_period)
-    if rsi is None or len(rsi.dropna()) < cfg.rsi_slope_days + 1:
+    if rsi is None:
         return 0.0
-    return (rsi.iloc[-1] - rsi.iloc[-1 - cfg.rsi_slope_days]) / cfg.rsi_slope_days
+    rsi = rsi.dropna()
+    window_len = cfg.rsi_slope_days + 1
+    if len(rsi) < window_len:
+        return 0.0
+
+    if rsi.iloc[-1] < cfg.rsi_slope_min:
+        return 0.0
+
+    # 1. overall slope over lookback period must be positive
+    slope = rsi.iloc[-1] > rsi.iloc[-1 - cfg.rsi_period]
+
+    # 2. rsi must be trending up over the lookback period, allowing for noise/dips
+    overall_slope = trend_period(rsi, window_len)
+
+    # 3. recent slope over half the lookback period must also be positive to avoid old uptrend that's now reversing
+    recent_slope = trend_period(rsi, max(3, window_len // 2))
+    return slope and overall_slope > 0 and recent_slope > 0
 
 
 def _find_support(close: pd.Series, cfg: ScannerConfig) -> Optional[float]:
@@ -81,7 +117,7 @@ def _find_support(close: pd.Series, cfg: ScannerConfig) -> Optional[float]:
     return float(close.rolling(cfg.support_lookback).min().iloc[-1])
 
 
-# use the pricing funcitons to get strike for a given delta instead of this. this is just a rough approximation and may not be accurate enough for backtesting.
+# TODO : use the pricing functions to get strike for a given delta instead of this. this is just a rough approximation and may not be accurate enough for backtesting.
 def _nearest_strike_below(price: float, increment: float) -> float:
     """Largest strike that is a multiple of increment and <= price."""
     import math
@@ -125,12 +161,11 @@ def scan(current_date: date, price_df: pd.DataFrame, earnings_dates: list[date],
     current_price = float(close.iloc[-1])
 
     # ── gate 2: EMA(20) trending up ──────────────────────────────────────
-    if not _ema_trending_up(close, cfg):
+    if _ema_trending_up(close, cfg) > 0.0:
         return False, None
 
     # ── gate 3: RSI(14) slope > threshold ────────────────────────────────
-    slope = _rsi_slope(close, cfg)
-    if slope < cfg.rsi_slope_min:
+    if _rsi_slope(close, cfg) > 0.0:
         return False, None
 
     # ── gate 4: support exists and price is sufficiently above it ────────
