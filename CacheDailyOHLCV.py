@@ -38,7 +38,7 @@ class CachedailyOHLCV:
     def get_lastday(self, df):
         if len(df) == 0:
             return self.start_date
-        return df.index.max().date()
+        return df.index.max().to_pydatetime()
 
     # Creating a Function
     @staticmethod
@@ -50,13 +50,13 @@ class CachedailyOHLCV:
     def last_week_day(self):
         today = date.today()
         if self.check_weekday(today):
-            return today
+            return datetime.combine(today, datetime.min.time())
         today = today - timedelta(days=1)
         if self.check_weekday(today):
-            return today
+            return datetime.combine(today, datetime.min.time())
         today = today - timedelta(days=1)
-        return today
- 
+        return datetime.combine(today, datetime.min.time())
+
     def update_ticker(self, ticker):
         old_df = self.get_cache(ticker)
         last_date = self.get_lastday(old_df)
@@ -67,6 +67,8 @@ class CachedailyOHLCV:
         end_date = start_date + timedelta(days=self.delta_days)  
         if end_date > last_week_day:
             end_date = last_week_day
+        if end_date <= start_date:
+            end_date = start_date + timedelta(days=1)
         print("{} getting ticker {} from {} to {}. last date={}, old_df len={}".format(datetime.today(), ticker, start_date, end_date, last_date, len(old_df)))
 
         # get yahoo finance data

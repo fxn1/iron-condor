@@ -9,7 +9,7 @@ Extends BaseStrategy.  The stock backtest engine (backtest_engine_stocks.py)
 calls these methods; the SPX engine is untouched.
 """
 
-from datetime import timedelta, date
+from datetime import timedelta, date, datetime
 import pandas as pd
 from backtest_engine import run_main
 from base_strategy import BaseStrategy, TradeSignal, TradeEntryReason
@@ -72,8 +72,7 @@ class StockPutSpreadStrategy(BaseStrategy):
     # ── inherited functions called by backtest_engine
     def load_data(self, start_date, delta_days):
         sp500_list = get_spy_ticker_list()
-        sp500_list = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META', 'NVDA', 'TSLA', 'JPM', 'V', 'UNH']  # TODO: expand as needed
-        sp500_list = ['AAPL']  # TODO for testing
+        # sp500_list = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META', 'NVDA', 'TSLA', 'JPM', 'V', 'UNH']  # TODO: expand as needed
         print("  Loading stock price data...")
         cache = CachedailyOHLCV(path=YF_DATA_PATH, start_date=start_date, delta_days=delta_days)
         self.price_data = cache.download_list(sp500_list)
@@ -168,7 +167,7 @@ class StockPutSpreadStrategy(BaseStrategy):
 
     def get_trading_dates(self, start_date, end_date) -> list:
         sorted_dates = next(iter(self.sorted_dates.values()))
-        dates = [date.fromisoformat(d) for d in sorted_dates]
+        dates = [pd.Timestamp(d) for d in sorted_dates]
         return [d for d in dates if start_date <= d <= end_date]
 
     def print_strategy_config(self):
@@ -210,8 +209,7 @@ def _get_expiration(entry_date):
 
 
 if __name__ == "__main__":
-    BACKTEST_START_DATE = date.fromisoformat("2000-01-01")
-    BACKTEST_START_DATE = date.today() - timedelta(days=365)
+    BACKTEST_START_DATE = datetime(2026, 5, 1)
     fix_delta_days = 365*4
 
     strategy = StockPutSpreadStrategy()
@@ -219,10 +217,10 @@ if __name__ == "__main__":
     run_main(
         strategy      = strategy,
         title         = "PUT SPREAD ON STOCKS",
-        script_name   = "Options_Using_SPX_10_NetDelta_Fixed4.py",  # for consistent naming in reports
-        csv_filename  = "Stock_Put_Spread_10Year_Backtest.csv",
+        script_name   = "Scanner_Put_Spread.py",  # for consistent naming in reports
+        csv_filename  = "Stock_Put_Spread_Backtest.csv",
         start_date    = BACKTEST_START_DATE,
-        delta_days    =fix_delta_days,
+        delta_days    = fix_delta_days,
         extra_summary_lines = lambda r: [
             f"total trades: {r['total_trades']:^22}|",
             f"win rate:     {r['win_rate']:^22.2%}|",
