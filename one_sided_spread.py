@@ -180,3 +180,6 @@ class OneSidedSpreadTrade(Trade):
             return True
 
         return False
+
+    def _close_at_expiration(self, spx_price):
+        pass

@@ -18,6 +18,10 @@ from base_strategy import TradeEntryReason
 from reporting import print_results, export_trades_to_csv
 
 
+def log(msg=""):
+    print(f"{datetime.now()}  {msg}")
+
+
 # ============================================================================
 # BACKTEST ENGINE
 # ============================================================================
@@ -42,19 +46,19 @@ def run_backtest(start_date, delta_days, strategy, run_title):
     if start_date > today:
         raise ValueError("Start date cannot be in the future.")
     if end_date < today:
-        print(f"  Backtest end date: {end_date.strftime('%Y-%m-%d')}")
+        log(f"  Backtest end date: {end_date.strftime('%Y-%m-%d')}")
     if end_date > today:
         end_date = today
     strategy.load_data(start_date, delta_days)
-    print()
-    print("=" * 80)
-    print(f"RUNNING 10-YEAR ({run_title})")
-    print("=" * 80)
-    print()
-    print(f"  Period:       {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
+    log()
+    log("=" * 80)
+    log(f"RUNNING 10-YEAR ({run_title})")
+    log("=" * 80)
+    log()
+    log(f"  Period:       {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
     strategy.print_strategy_config()
-    print(f"  Exits:       50% profit, 10 DTE smart exit, 2x stop  (gap-aware)")
-    print()
+    log(f"  Exits:       50% profit, 10 DTE smart exit, 2x stop  (gap-aware)")
+    log()
 
     open_trades   = []
     closed_trades = []
@@ -72,7 +76,7 @@ def run_backtest(start_date, delta_days, strategy, run_title):
     days_in_roll_zone     = 0
     max_concurrent        = 0  # Still tracked for INFORMATIONAL output
 
-    print("  Running backtest...")
+    log("  Running backtest...")
 
     for current_date in dates:
         trades_to_close = []
@@ -183,7 +187,7 @@ def run_backtest(start_date, delta_days, strategy, run_title):
     win_rate = winning / n * 100 if n else 0
     pf = abs(gp / gl) if gl else float('inf')
     skips = {'skipped_vix': trades_skipped_vix, 'skipped_dup_exp': skipped_duplicate_exp}
-    print("  Complete!\n")
+    log("  Complete!\n")
     return {
         'total_trades':         n,
         'trades_entered':       trades_entered,
@@ -236,11 +240,11 @@ def run_main(*, strategy, title, script_name, csv_filename, start_date, delta_da
                           summary box.  Receives results so lines can reference
                           runtime values like max_concurrent.
     """
-    print()
-    print("=" * 80)
-    print(script_name)
-    print("=" * 80)
-    print()
+    log()
+    log("=" * 80)
+    log(script_name)
+    log("=" * 80)
+    log()
 
     years   = delta_days / 365.25
     results = run_backtest(start_date, delta_days, strategy, title)
@@ -250,16 +254,16 @@ def run_main(*, strategy, title, script_name, csv_filename, start_date, delta_da
 
     csv_path = os.path.join(OUTPUT_PATH, csv_filename)
     export_trades_to_csv(results, csv_path)
-    print()
+    log()
 
     if not results['closed_trades']:
-        print("=" * 80)
-        print(f"FINAL SUMMARY - 10 YEAR SPX BACKTEST  ({title})")
-        print("=" * 80)
-        print()
-        print("  No trades were generated for this run.")
-        print("  Check the strategy date range, loaded market data, and entry filters.")
-        print()
+        log("=" * 80)
+        log(f"FINAL SUMMARY - 10 YEAR SPX BACKTEST  ({title})")
+        log("=" * 80)
+        log()
+        log("  No trades were generated for this run.")
+        log("  Check the strategy date range, loaded market data, and entry filters.")
+        log()
         return results
 
     avg_credit = sum(t.cumulative_credit for t in results['closed_trades']) / len(results['closed_trades'])
@@ -270,21 +274,21 @@ def run_main(*, strategy, title, script_name, csv_filename, start_date, delta_da
     annual_pnl = results['total_pnl_dollars'] / years
     roc        = annual_pnl / margin * 100 if margin else 0
 
-    print("=" * 80)
-    print(f"FINAL SUMMARY - 10 YEAR SPX BACKTEST  ({title})")
-    print("=" * 80)
-    print()
-    print(f"  +{'-'*60}+")
-    print(f"  |{'CAPITAL INVESTED:':^30}{'${:,.0f}'.format(margin):^30}|")
+    log("=" * 80)
+    log(f"FINAL SUMMARY - 10 YEAR SPX BACKTEST  ({title})")
+    log("=" * 80)
+    log()
+    log(f"  +{'-'*60}+")
+    log(f"  |{'CAPITAL INVESTED:':^30}{'${:,.0f}'.format(margin):^30}|")
     for line in (extra_summary_lines(results) if extra_summary_lines else []):
-        print(line)
-    print(f"  |{'TOTAL P&L (10 years):':^30}{'${:,.0f}'.format(results['total_pnl_dollars']):^30}|")
+        log(line)
+    log(f"  |{'TOTAL P&L (10 years):':^30}{'${:,.0f}'.format(results['total_pnl_dollars']):^30}|")
     if margin:
-        print(f"  |{'TOTAL RETURN:':^30}{'{:.0f}%'.format(results['total_pnl_dollars']/margin*100):^30}|")
-    print(f"  |{'ANNUAL P&L:':^30}{'${:,.0f}'.format(annual_pnl):^30}|")
-    print(f"  |{'ANNUAL ROC:':^30}{'{:.1f}%'.format(roc):^30}|")
-    print(f"  |{'WIN RATE:':^30}{'{:.1f}%'.format(results['win_rate']):^30}|")
-    print(f"  |{'PROFIT FACTOR:':^30}{'{:.2f}'.format(results['profit_factor']):^30}|")
-    print(f"  |{'TOTAL ROLLS (PUT/CALL):':^30}{'{}/{}'.format(results['total_put_rolls'], results['total_call_rolls']):^30}|")
-    print(f"  +{'-'*60}+")
-    print()
+        log(f"  |{'TOTAL RETURN:':^30}{'{:.0f}%'.format(results['total_pnl_dollars']/margin*100):^30}|")
+    log(f"  |{'ANNUAL P&L:':^30}{'${:,.0f}'.format(annual_pnl):^30}|")
+    log(f"  |{'ANNUAL ROC:':^30}{'{:.1f}%'.format(roc):^30}|")
+    log(f"  |{'WIN RATE:':^30}{'{:.1f}%'.format(results['win_rate']):^30}|")
+    log(f"  |{'PROFIT FACTOR:':^30}{'{:.2f}'.format(results['profit_factor']):^30}|")
+    log(f"  |{'TOTAL ROLLS (PUT/CALL):':^30}{'{}/{}'.format(results['total_put_rolls'], results['total_call_rolls']):^30}|")
+    log(f"  +{'-'*60}+")
+    log()

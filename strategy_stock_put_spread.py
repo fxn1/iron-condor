@@ -9,7 +9,7 @@ Extends BaseStrategy.  The stock backtest engine (backtest_engine_stocks.py)
 calls these methods; the SPX engine is untouched.
 """
 
-from datetime import timedelta, date, datetime
+from datetime import timedelta, datetime
 import pandas as pd
 from backtest_engine import run_main
 from base_strategy import BaseStrategy, TradeSignal, TradeEntryReason
@@ -22,6 +22,10 @@ from config import YF_DATA_PATH
 from config_stocks import *
 
 
+def log(msg=""):
+    print(f"{datetime.now()}  {msg}")
+
+
 class StockPutSpreadStrategy(BaseStrategy):
     """
     Entry  : day after earnings + EMA/RSI/support filters (via scanner.py)
@@ -32,10 +36,9 @@ class StockPutSpreadStrategy(BaseStrategy):
     def __init__(self):
         """
         price_data    : {ticker: pd.DataFrame}  from cachebt.download_list()
-        earnings_data : {ticker: [date, ...]}   from CacheEarnings.get_earnings_dates()
         """
         self.price_data      = {}
-        self.earnings_data   = {}
+        self.earnings_cache  = None
         self.used_expirations = set()
         self.sorted_dates     = {}    # {ticker: [sorted list of dates in price_data]}
         self.cfg           = ScannerConfig(
@@ -72,17 +75,13 @@ class StockPutSpreadStrategy(BaseStrategy):
     # ── inherited functions called by backtest_engine
     def load_data(self, start_date, delta_days):
         sp500_list = get_spy_ticker_list()
-        # sp500_list = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META', 'NVDA', 'TSLA', 'JPM', 'V', 'UNH']  # TODO: expand as needed
-        print("  Loading stock price data...")
+        log(" Loading stock price data...")
         cache = CachedailyOHLCV(path=YF_DATA_PATH, start_date=start_date, delta_days=delta_days)
         self.price_data = cache.download_list(sp500_list)
-        print(f"  ✓ Loaded {len(self.price_data)} tickers")
+        log(f"  ✓ Loaded {len(self.price_data)} tickers")
 
-        print("  Loading earnings data...")
-        earnings_cache = EarningsCache(path=YF_DATA_PATH)
+        self.earnings_cache = EarningsCache(path=YF_DATA_PATH)
         # earnings_cache.download_list(sp500_list)  # TODO: manual run for now
-        self.earnings_data = {t: earnings_cache.get_earnings_dates(t) for t in sp500_list}
-        print(f"  ✓ Loaded earnings for {len(self.earnings_data)} tickers")
 
         # precompute sorted date lists per ticker for vol lookback
         for ticker, df in self.price_data.items():
@@ -98,14 +97,16 @@ class StockPutSpreadStrategy(BaseStrategy):
         """
         signals = []
         for ticker, price_df in self.price_data.items():
-            earnings_dates = self.earnings_data.get(ticker, [])
-            if current_date not in price_df.index:
-                continue
+            earnings_dates = self.earnings_cache.get_earnings_dates(ticker)
+            # log(f" Loaded  {len(earnings_dates)} earnings for ticker={ticker}")
             entered, strike = scan(current_date, price_df, earnings_dates, self.cfg)
             if entered:
                 exp_key = (ticker, _get_expiration(current_date))
                 if exp_key not in self.used_expirations:
-                    signals.append(TradeSignal(reason=TradeEntryReason.SHOULD_ENTER, ticker=ticker, strike=strike))
+                    if strike - STOCK_WING_WIDTH > 5.0:  # TODO: cfg min long strike
+                        signals.append(TradeSignal(reason=TradeEntryReason.SHOULD_ENTER, ticker=ticker, strike=strike))
+                    else:
+                        signals.append(TradeSignal(reason=TradeEntryReason.SKIPPED_LOW_STRIKE, ticker=ticker))
                 else:
                     signals.append(TradeSignal(reason=TradeEntryReason.SKIPPED_DUP_EXP, ticker=ticker))
             else:
@@ -172,11 +173,11 @@ class StockPutSpreadStrategy(BaseStrategy):
         return [d for d in dates if start_date <= d <= end_date]
 
     def print_strategy_config(self):
-        print(f"  Strategy:    Stock Put Spread  (wing ${STOCK_WING_WIDTH}, {STOCK_TARGET_DTE} DTE)")
-        print(f"  Entry:       Day after earnings, EMA({SCAN_EMA_PERIOD}) up, RSI slope > {SCAN_RSI_SLOPE_MIN}")
-        print(f"  Support:     {SCAN_SUPPORT_LOOKBACK}-day rolling low, strike increment ${SCAN_STRIKE_INCREMENT}")
-        print(f"  Profit target: {int(STOCK_PROFIT_TARGET * 100)}%  Stop: {STOCK_STOP_LOSS_MULT}x credit")
-        print(f"  Capital:      ")
+        log(f"  Strategy:    Stock Put Spread  (wing ${STOCK_WING_WIDTH}, {STOCK_TARGET_DTE} DTE)")
+        log(f"  Entry:       Day after earnings, EMA({SCAN_EMA_PERIOD}) up, RSI slope > {SCAN_RSI_SLOPE_MIN}")
+        log(f"  Support:     {SCAN_SUPPORT_LOOKBACK}-day rolling low, strike increment ${SCAN_STRIKE_INCREMENT}")
+        log(f"  Profit target: {int(STOCK_PROFIT_TARGET * 100)}%  Stop: {STOCK_STOP_LOSS_MULT}x credit")
+        log(f"  Capital:      ")
 
     def print_extra_results(self, results, years):
         from reporting import print_stock_results
@@ -210,7 +211,7 @@ def _get_expiration(entry_date):
 
 
 if __name__ == "__main__":
-    BACKTEST_START_DATE = datetime(2026, 5, 1)
+    BACKTEST_START_DATE = datetime(2026, 4, 1)
     fix_delta_days = 365*4
 
     strategy = StockPutSpreadStrategy()

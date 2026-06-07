@@ -11,7 +11,7 @@ not in the logic below.
 """
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import timedelta, date
 from typing import Optional
 
 import pandas as pd
@@ -188,7 +188,7 @@ if __name__ == "__main__":
     from CacheDailyOHLCV import CachedailyOHLCV, get_spy_ticker_list
     from CacheEarning import EarningsCache
     from config import YF_DATA_PATH
-    from datetime import timedelta, date, datetime
+    from datetime import datetime
     from config_stocks import *
 
     start_date = datetime(2025, 5, 1)

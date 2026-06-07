@@ -31,6 +31,7 @@ class TradeEntryReason(Enum):
     SKIPPED_VIX     = "skipped_vix"
     SKIPPED_DUP_EXP = "skipped_dup_exp"
     NOT_MONDAY      = "not_monday"
+    SKIPPED_LOW_STRIKE = "skipped_low_strike"
     NO_SIGNAL       = "no_signal"       # generic — used by stock strategy
 
 

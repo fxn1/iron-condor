@@ -55,6 +55,19 @@ class Trade(ABC):
         self.spx_price_at_exit       = None
         self.spx_price_at_expiration = None
 
+        # TODO: move this to roll_stats
+        self.put_rolls = []   # list of dicts describing each closed put spread
+        self.call_rolls = []  # list of dicts describing each closed call spread
+        self.put_short = None
+        self.put_long  = None
+        self.put_credit = 0.0
+        self.put_exit_reason = None
+        self.call_short = None
+        self.call_long  = None
+        self.call_credit = 0.0
+        self.call_exit_reason = None
+
+
     # ── must implement ────────────────────────────────────────────────────
 
     @abstractmethod
@@ -135,8 +148,6 @@ class IronCondorTrade(Trade):
         # Cumulative tracking across rolls
         self.cumulative_credit = put_credit + call_credit
         self.banked_pnl = 0.0
-        self.put_rolls = []   # list of dicts describing each closed put spread
-        self.call_rolls = []  # list of dicts describing each closed call spread
 
         # Trade status
         self.is_open = True

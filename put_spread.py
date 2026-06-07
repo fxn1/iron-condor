@@ -45,6 +45,7 @@ def create_put_spread_from_scan(entry_date, expiration_date, spx_price, vix, sho
     T   = max(dte / 365.0, 0.001)
     vol = volatility * 1.10   # matches IC put vol convention
 
+    # print(f"create_put_spread_from_scan: spx_price={spx_price}, short_strike={short_strike}, long_strike={long_strike}. wing_width={wing_width}, T={T:.4f}, dte={dte}, r={RISK_FREE_RATE:.4f}, sigma={vol:.4f}, put")
     ps = black_scholes_price(spx_price, short_strike, T, RISK_FREE_RATE, vol, 'put')
     pl = black_scholes_price(spx_price, long_strike,  T, RISK_FREE_RATE, vol, 'put')
     credit = ps - pl
