@@ -95,6 +95,9 @@ def _rsi_slope(close: pd.Series, cfg: ScannerConfig) -> float:
     if len(rsi) < window_len:
         return 0.0
 
+    if len(rsi) <= cfg.rsi_period:
+        return 0.0
+
     if rsi.iloc[-1] < cfg.rsi_slope_min:
         return 0.0
 

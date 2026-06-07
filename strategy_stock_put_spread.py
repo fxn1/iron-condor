@@ -211,7 +211,7 @@ def _get_expiration(entry_date):
 
 
 if __name__ == "__main__":
-    BACKTEST_START_DATE = datetime(2026, 4, 1)
+    BACKTEST_START_DATE = datetime(2022, 6, 1)
     fix_delta_days = 365*4
 
     strategy = StockPutSpreadStrategy()

@@ -1,0 +1,2019 @@
+C:\Neeraj\backup\tech\systematicinv\iron-condor\venv\Scripts\python.exe C:\Neeraj\backup\tech\systematicinv\iron-condor\strategy_stock_put_spread.py
+2026-06-07 17:49:15.508698
+2026-06-07 17:49:15.508698  ================================================================================
+2026-06-07 17:49:15.508698  Scanner_Put_Spread.py
+2026-06-07 17:49:15.508698  ================================================================================
+2026-06-07 17:49:15.508698
+2026-06-07 17:49:15.508698    Backtest end date: 2026-06-01
+sp500 rows <class 'list'> with length 503
+2026-06-07 17:49:15.999774   Loading stock price data...
+2026-06-07 17:49:26.235018 503 end download
+2026-06-07 17:49:26.235018    ✓ Loaded 503 tickers
+2026-06-07 17:49:31.184388
+2026-06-07 17:49:31.184388  ================================================================================
+2026-06-07 17:49:31.184388  RUNNING 10-YEAR (PUT SPREAD ON STOCKS)
+2026-06-07 17:49:31.184388  ================================================================================
+2026-06-07 17:49:31.184388
+2026-06-07 17:49:31.184388    Period:       2022-06-01 to 2026-06-01
+2026-06-07 17:49:31.184388    Strategy:    Stock Put Spread  (wing $10, 60 DTE)
+2026-06-07 17:49:31.184388    Entry:       Day after earnings, EMA(20) up, RSI slope > 0.5
+2026-06-07 17:49:31.184388    Support:     20-day rolling low, strike increment $5.0
+2026-06-07 17:49:31.184388    Profit target: 15%  Stop: 2.0x credit
+2026-06-07 17:49:31.184388    Capital:
+2026-06-07 17:49:31.184388    Exits:       50% profit, 10 DTE smart exit, 2x stop  (gap-aware)
+2026-06-07 17:49:31.184388
+2026-06-07 17:49:31.190390    Running backtest...
+[X] Series has 18 rows but indicator requires at least 20. Returning None.
+2026-06-07 18:13:09.009308    Complete!
+
+
+================================================================================
+10-YEAR SPX BACKTEST RESULTS  (NET-DELTA + FIXED *5 CAPITAL)
+================================================================================
+
+  STRATEGY
+  ------------------------------------------------------------
+    Underlying:        SPX
+    PUT/CALL Delta:    18 / 14
+    Wing Width:        $50
+    Roll Threshold:    |net delta| > 15
+    Profit Target:     50%
+    Stop Loss:         2x credit per leg (worst-intraday)
+    10 DTE Exit:       Smart exit, gap-aware
+    VIX No-Trade:      > 25
+    Capital Sizing:    fixed 5 concurrent
+
+  TRADE STATISTICS
+  ------------------------------------------------------------
+    Total Trades:           889
+    Monday Entries:         889
+    Re-entry Trades:        0
+    Skipped (VIX > 25):     0
+    Winning Trades:         864
+    Losing Trades:          25
+    Win Rate:               97.2%
+
+  NET-DELTA MANAGEMENT
+  ------------------------------------------------------------
+    Days in Warn band (10-15):     0
+    Days in Roll zone (>15):       0
+    Trades that rolled at least 1x:    0
+    Total PUT-side rolls:              0
+    Total CALL-side rolls:             0
+
+  EXIT REASONS
+  ------------------------------------------------------------
+    Profit Target                        864 ( 97.2%)
+    Stop Loss                             21 (  2.4%)
+    Expiration                             4 (  0.4%)
+
+  PROFIT & LOSS
+  ------------------------------------------------------------
+    Total P&L:              $38,707.12
+    Gross Profit:           $49,228.57
+    Gross Loss:             $-10,521.45
+    Profit Factor:          4.68
+    Avg Win:                $56.98
+    Avg Loss:               $-420.86
+    Max Drawdown:           $1,393.17
+
+  CAPITAL ANALYSIS
+  ------------------------------------------------------------
+    Avg Credit/Trade:       $1.90 (incl. rolls)
+    Margin per Contract:    $4,809.55
+    Concurrent Trades:      5  (fixed - matches observed peak)
+    Peak Observed:          16  (informational)
+    Total Capital Required: $24,047.73
+    Annual P&L:             $9,683.41
+    Annual ROC:             40.3%
+    Total Return (4 yrs):    161.0%
+
+  YEARLY BREAKDOWN
+  ------------------------------------------------------------
+    Year   Trades   Wins   Win%     Rolls    P&L            ROC
+    ------ -------- ------ -------- -------- -------------- ----------
+    2022   109      105    96.3   % 0        $   3,892.06     16.2%
+    2023   215      210    97.7   % 0        $   8,437.22     35.1%
+    2024   180      175    97.2   % 0        $   8,250.09     34.3%
+    2025   255      247    96.9   % 0        $  10,811.21     45.0%
+    2026   130      127    97.7   % 0        $   7,316.54     30.4%
+
+
+  PER-TICKER P&L BREAKDOWN
+  ------------------------------------------------------------
+    Ticker   Trades   Wins   Win%     Total P&L
+    -------- -------- ------ -------- ------------
+    AAPL     1        1      100.0  % $     68.71
+    ABBV     1        1      100.0  % $    144.51
+    ABNB     2        2      100.0  % $    192.79
+    ABT      3        3      100.0  % $    100.07
+    ACGL     1        1      100.0  % $     26.07
+    ACN      3        3      100.0  % $    235.01
+    ADBE     1        1      100.0  % $     55.24
+    ADI      3        2      66.7   % $   -296.60
+    ADM      2        2      100.0  % $     37.63
+    ADSK     2        1      50.0   % $   -409.18
+    AEE      1        1      100.0  % $     27.00
+    AEP      1        1      100.0  % $     20.87
+    AFL      2        2      100.0  % $    114.43
+    AIZ      1        1      100.0  % $     49.57
+    AJG      2        2      100.0  % $    222.65
+    ALB      6        5      83.3   % $   -133.38
+    ALGN     5        5      100.0  % $    494.43
+    ALL      5        5      100.0  % $    292.85
+    AMAT     2        2      100.0  % $    187.48
+    AMCR     4        4      100.0  % $     91.09
+    AMD      2        2      100.0  % $    198.19
+    AME      2        2      100.0  % $    100.49
+    AMGN     2        2      100.0  % $    160.19
+    AMP      1        1      100.0  % $     57.57
+    AMT      2        2      100.0  % $    101.86
+    AMZN     1        1      100.0  % $     89.57
+    ANET     2        1      50.0   % $   -442.42
+    AOS      2        2      100.0  % $     80.65
+    APA      5        4      80.0   % $    -91.18
+    APD      3        3      100.0  % $    179.87
+    APH      1        1      100.0  % $     50.54
+    APO      4        3      75.0   % $   -395.32
+    APTV     5        5      100.0  % $    319.22
+    ARE      4        4      100.0  % $    150.13
+    ARES     2        2      100.0  % $    178.14
+    AVB      1        1      100.0  % $     61.66
+    AVGO     2        2      100.0  % $    144.24
+    AVY      3        3      100.0  % $    201.22
+    AXON     1        1      100.0  % $     86.43
+    AXP      1        1      100.0  % $     75.99
+    AZO      4        4      100.0  % $    255.81
+    BA       2        2      100.0  % $    117.42
+    BAC      3        3      100.0  % $     43.32
+    BALL     1        1      100.0  % $     33.29
+    BAX      2        2      100.0  % $     37.15
+    BBY      2        2      100.0  % $     50.62
+    BDX      2        2      100.0  % $    115.52
+    BF-B     3        3      100.0  % $     86.53
+    BG       2        2      100.0  % $    120.11
+    BIIB     3        3      100.0  % $    180.70
+    BKNG     3        3      100.0  % $    242.68
+    BKR      4        4      100.0  % $     77.71
+    BLDR     4        3      75.0   % $   -350.14
+    BLK      1        1      100.0  % $     77.30
+    BMY      2        2      100.0  % $     52.89
+    BNY      1        1      100.0  % $      3.33
+    BR       4        3      75.0   % $     77.24
+    BRO      2        2      100.0  % $     48.05
+    BSX      1        1      100.0  % $     98.49
+    BX       2        2      100.0  % $     88.22
+    BXP      2        2      100.0  % $     70.37
+    C        3        3      100.0  % $    127.76
+    CAG      1        1      100.0  % $     17.20
+    CASY     3        3      100.0  % $    171.69
+    CAT      5        4      80.0   % $   -360.79
+    CB       4        4      100.0  % $    213.57
+    CBRE     4        4      100.0  % $    303.78
+    CCI      2        2      100.0  % $     53.79
+    CDNS     2        2      100.0  % $    133.59
+    CDW      1        1      100.0  % $     73.46
+    CEG      4        3      75.0   % $   -169.45
+    CF       4        4      100.0  % $    276.88
+    CFG      1        1      100.0  % $     26.56
+    CHRW     1        1      100.0  % $     58.84
+    CI       4        4      100.0  % $    276.44
+    CIEN     5        5      100.0  % $    327.04
+    CINF     1        1      100.0  % $     19.71
+    CMCSA    2        2      100.0  % $     19.97
+    CMG      3        3      100.0  % $     45.11
+    CMI      1        1      100.0  % $    101.60
+    CNC      1        1      100.0  % $     38.56
+    CNP      1        1      100.0  % $      0.54
+    COIN     6        4      66.7   % $   -897.49
+    COO      2        2      100.0  % $     90.71
+    COP      3        3      100.0  % $    188.77
+    COR      2        1      50.0   % $   -141.78
+    COST     2        2      100.0  % $    232.97
+    CPAY     6        6      100.0  % $    441.63
+    CPB      2        2      100.0  % $     11.04
+    CPRT     1        1      100.0  % $      6.34
+    CPT      2        2      100.0  % $     73.26
+    CRH      2        2      100.0  % $     87.27
+    CRL      6        6      100.0  % $    499.84
+    CRM      2        2      100.0  % $    206.64
+    CRWD     2        2      100.0  % $    136.67
+    CSCO     1        1      100.0  % $     70.53
+    CSGP     1        1      100.0  % $     80.97
+    CSX      3        3      100.0  % $     56.84
+    CTAS     2        2      100.0  % $    161.71
+    CTSH     2        2      100.0  % $     90.03
+    CVS      3        3      100.0  % $     87.31
+    DAL      3        3      100.0  % $    124.98
+    DASH     3        3      100.0  % $    243.14
+    DD       1        1      100.0  % $      2.72
+    DDOG     2        2      100.0  % $    109.17
+    DE       2        1      50.0   % $   -528.97
+    DECK     1        1      100.0  % $     32.48
+    DELL     2        1      50.0   % $   -585.53
+    DG       3        3      100.0  % $    218.58
+    DGX      2        2      100.0  % $    157.42
+    DHR      2        2      100.0  % $    146.65
+    DLTR     4        4      100.0  % $    273.47
+    DOV      3        3      100.0  % $    187.35
+    DOW      3        3      100.0  % $     84.44
+    DRI      2        2      100.0  % $    139.19
+    DTE      1        1      100.0  % $     21.17
+    DUK      1        1      100.0  % $     12.68
+    DVN      4        4      100.0  % $    176.65
+    DXCM     3        2      66.7   % $   -213.10
+    EA       1        1      100.0  % $     29.08
+    EBAY     3        3      100.0  % $     94.45
+    ED       1        1      100.0  % $     18.04
+    EFX      4        4      100.0  % $    251.93
+    EG       2        2      100.0  % $    198.30
+    EIX      2        2      100.0  % $     49.95
+    EL       5        5      100.0  % $    465.71
+    ELV      3        3      100.0  % $    188.80
+    EME      4        3      75.0   % $     20.02
+    EMR      3        3      100.0  % $    129.78
+    EOG      4        4      100.0  % $    263.11
+    EQIX     2        2      100.0  % $    209.43
+    EQR      1        1      100.0  % $      6.97
+    EQT      3        3      100.0  % $    116.74
+    ESS      2        2      100.0  % $    187.13
+    ETR      1        1      100.0  % $     13.33
+    EW       1        1      100.0  % $     45.06
+    EXC      2        2      100.0  % $     28.37
+    EXE      3        3      100.0  % $    126.33
+    EXPD     3        3      100.0  % $    267.91
+    EXPE     4        4      100.0  % $    315.72
+    EXR      1        1      100.0  % $     77.52
+    FANG     3        3      100.0  % $    365.82
+    FAST     1        1      100.0  % $      7.27
+    FCX      4        4      100.0  % $     73.54
+    FDS      4        4      100.0  % $    349.99
+    FDX      2        2      100.0  % $    189.88
+    FICO     1        1      100.0  % $     92.56
+    FIS      5        5      100.0  % $    323.48
+    FISV     2        2      100.0  % $     59.93
+    FITB     2        2      100.0  % $     43.95
+    FIX      1        1      100.0  % $     98.64
+    FSLR     3        3      100.0  % $    275.54
+    FTNT     1        1      100.0  % $     49.36
+    FTV      2        2      100.0  % $     91.93
+    GD       4        4      100.0  % $    190.94
+    GE       1        1      100.0  % $     98.11
+    GEHC     3        3      100.0  % $    159.31
+    GEN      2        2      100.0  % $      7.58
+    GEV      1        1      100.0  % $     55.12
+    GILD     2        2      100.0  % $    114.90
+    GIS      2        2      100.0  % $     55.29
+    GL       2        2      100.0  % $    130.39
+    GLW      5        5      100.0  % $    269.01
+    GM       1        1      100.0  % $     24.42
+    GNRC     2        2      100.0  % $    172.58
+    GOOG     2        2      100.0  % $    132.33
+    GOOGL    2        2      100.0  % $    141.80
+    GPC      2        2      100.0  % $    184.47
+    GPN      4        3      75.0   % $   -221.45
+    GRMN     5        4      80.0   % $    -51.87
+    GS       3        3      100.0  % $    225.64
+    HAL      4        4      100.0  % $     70.28
+    HAS      1        1      100.0  % $     42.62
+    HD       2        2      100.0  % $    133.55
+    HIG      1        1      100.0  % $      8.97
+    HII      7        7      100.0  % $    533.37
+    HLT      4        4      100.0  % $    304.62
+    HON      1        1      100.0  % $     37.02
+    HOOD     3        3      100.0  % $    216.85
+    HPQ      1        1      100.0  % $     11.29
+    HRL      2        2      100.0  % $     20.49
+    HSIC     3        3      100.0  % $    145.39
+    HSY      1        1      100.0  % $     88.09
+    HUBB     1        1      100.0  % $     52.98
+    HUM      3        3      100.0  % $    233.69
+    HWM      1        1      100.0  % $     56.52
+    IBKR     3        2      66.7   % $    103.97
+    IBM      2        2      100.0  % $     85.70
+    ICE      2        2      100.0  % $     99.35
+    IDXX     3        3      100.0  % $    281.53
+    IEX      1        1      100.0  % $     47.13
+    IFF      2        2      100.0  % $    163.81
+    INTC     3        3      100.0  % $     29.10
+    INTU     5        4      80.0   % $   -262.83
+    INVH     2        2      100.0  % $     11.24
+    IP       4        4      100.0  % $     66.55
+    IQV      3        3      100.0  % $    266.40
+    IRM      3        3      100.0  % $    140.80
+    ISRG     1        1      100.0  % $     89.32
+    IT       5        5      100.0  % $    406.80
+    ITW      3        3      100.0  % $    154.86
+    IVZ      1        1      100.0  % $     28.52
+    J        3        3      100.0  % $    233.85
+    JBL      2        2      100.0  % $    160.82
+    JCI      1        1      100.0  % $     11.33
+    JKHY     1        1      100.0  % $    119.94
+    JNJ      1        1      100.0  % $     90.47
+    KDP      1        1      100.0  % $      9.03
+    KEYS     1        1      100.0  % $     51.17
+    KHC      6        6      100.0  % $     68.40
+    KKR      2        2      100.0  % $    143.13
+    KMB      4        4      100.0  % $    182.54
+    KMI      1        1      100.0  % $      1.68
+    KR       2        2      100.0  % $     48.41
+    LDOS     3        3      100.0  % $    172.26
+    LEN      4        4      100.0  % $    217.89
+    LHX      2        2      100.0  % $    144.16
+    LII      5        5      100.0  % $    527.99
+    LITE     3        3      100.0  % $    180.69
+    LLY      3        3      100.0  % $    273.46
+    LMT      3        3      100.0  % $    242.17
+    LOW      1        1      100.0  % $     74.94
+    LRCX     3        3      100.0  % $    181.86
+    LULU     4        4      100.0  % $    261.05
+    LUV      5        5      100.0  % $    149.08
+    LVS      2        2      100.0  % $     73.26
+    LYV      1        1      100.0  % $     21.70
+    MA       2        2      100.0  % $    165.94
+    MAA      1        1      100.0  % $     39.70
+    MAR      4        4      100.0  % $    199.36
+    MAS      2        2      100.0  % $     86.13
+    MCD      1        1      100.0  % $    171.33
+    MCHP     1        1      100.0  % $     40.73
+    MCO      4        4      100.0  % $    408.71
+    MDLZ     2        2      100.0  % $     26.26
+    MDT      3        3      100.0  % $     87.89
+    MET      2        2      100.0  % $     43.49
+    META     1        1      100.0  % $     89.23
+    MGM      2        2      100.0  % $     95.37
+    MKC      1        1      100.0  % $     31.97
+    MLM      3        3      100.0  % $    227.70
+    MMM      2        2      100.0  % $    121.10
+    MNST     1        1      100.0  % $     65.37
+    MO       1        1      100.0  % $     16.23
+    MOS      2        2      100.0  % $     22.38
+    MPC      1        1      100.0  % $    124.38
+    MPWR     1        1      100.0  % $     83.02
+    MRK      2        2      100.0  % $     98.72
+    MRNA     2        2      100.0  % $     38.48
+    MRSH     2        2      100.0  % $    136.32
+    MS       1        1      100.0  % $     61.42
+    MSCI     3        3      100.0  % $    193.73
+    MSI      1        1      100.0  % $    100.69
+    MTB      3        3      100.0  % $    196.87
+    MTD      2        1      50.0   % $   -462.83
+    MU       3        3      100.0  % $    277.14
+    NDAQ     3        3      100.0  % $     74.63
+    NDSN     1        1      100.0  % $     62.15
+    NEE      3        3      100.0  % $     73.97
+    NEM      2        2      100.0  % $     44.14
+    NFLX     1        1      100.0  % $      8.83
+    NI       1        1      100.0  % $     18.58
+    NKE      1        1      100.0  % $     39.74
+    NOC      1        1      100.0  % $     71.46
+    NOW      7        7      100.0  % $    422.46
+    NRG      3        3      100.0  % $     74.88
+    NTAP     2        2      100.0  % $    142.76
+    NTRS     3        3      100.0  % $    145.71
+    NUE      1        1      100.0  % $     50.89
+    NVDA     1        1      100.0  % $     88.82
+    NVR      3        3      100.0  % $    290.03
+    NXPI     1        1      100.0  % $     70.60
+    O        1        1      100.0  % $     18.48
+    ODFL     3        3      100.0  % $    227.86
+    OKE      4        4      100.0  % $    105.82
+    OMC      2        2      100.0  % $     38.66
+    ON       4        4      100.0  % $    328.82
+    ORLY     1        1      100.0  % $     50.54
+    OTIS     2        2      100.0  % $     65.24
+    OXY      3        3      100.0  % $     67.92
+    PAYX     6        6      100.0  % $    229.59
+    PCAR     2        2      100.0  % $     77.47
+    PEG      3        3      100.0  % $     72.92
+    PEP      1        1      100.0  % $     50.04
+    PFE      2        2      100.0  % $      8.17
+    PFG      5        4      80.0   % $     46.73
+    PG       2        2      100.0  % $     97.37
+    PGR      3        3      100.0  % $    163.34
+    PH       2        2      100.0  % $     97.35
+    PHM      3        3      100.0  % $    130.02
+    PKG      4        4      100.0  % $    278.48
+    PLD      2        2      100.0  % $     72.99
+    PLTR     3        2      66.7   % $   -321.43
+    PM       4        4      100.0  % $    126.18
+    PNC      1        1      100.0  % $     66.64
+    PNR      2        2      100.0  % $    106.73
+    PNW      1        1      100.0  % $     16.29
+    PODD     3        3      100.0  % $    194.20
+    POOL     3        3      100.0  % $    207.10
+    PPG      2        2      100.0  % $    145.55
+    PRU      2        2      100.0  % $    129.48
+    PSA      2        2      100.0  % $    175.37
+    PTC      1        1      100.0  % $     43.96
+    PYPL     2        2      100.0  % $     96.00
+    QCOM     3        3      100.0  % $    218.08
+    RCL      2        2      100.0  % $    210.24
+    REG      1        1      100.0  % $     38.18
+    REGN     3        3      100.0  % $    224.35
+    RJF      2        2      100.0  % $     79.45
+    RL       2        2      100.0  % $    207.41
+    ROK      4        4      100.0  % $    365.21
+    ROP      3        3      100.0  % $    164.03
+    ROST     1        1      100.0  % $     24.78
+    RSG      2        2      100.0  % $     99.93
+    RTX      2        2      100.0  % $    110.04
+    RVTY     4        4      100.0  % $    262.98
+    SATS     1        1      100.0  % $     46.89
+    SBAC     1        1      100.0  % $     81.32
+    SBUX     1        1      100.0  % $     30.95
+    SCHW     1        1      100.0  % $     56.48
+    SHW      1        1      100.0  % $     50.70
+    SJM      2        2      100.0  % $     79.12
+    SMCI     3        3      100.0  % $    200.72
+    SNA      2        2      100.0  % $    134.55
+    SNPS     1        1      100.0  % $    130.26
+    SOLV     2        2      100.0  % $     67.81
+    SPGI     1        1      100.0  % $     68.37
+    SRE      1        1      100.0  % $     51.41
+    STE      2        2      100.0  % $     66.63
+    STLD     1        1      100.0  % $     26.55
+    STT      2        2      100.0  % $     89.70
+    STX      2        2      100.0  % $     61.87
+    STZ      3        3      100.0  % $    191.10
+    SW       3        3      100.0  % $     62.52
+    SWK      3        3      100.0  % $    242.37
+    SWKS     2        2      100.0  % $     89.66
+    SYF      2        2      100.0  % $     89.65
+    SYK      2        2      100.0  % $    109.60
+    SYY      2        2      100.0  % $     48.49
+    T        1        1      100.0  % $      5.81
+    TAP      5        5      100.0  % $     65.13
+    TDG      2        2      100.0  % $    192.03
+    TDY      2        2      100.0  % $    201.88
+    TECH     5        5      100.0  % $    212.86
+    TEL      2        2      100.0  % $    162.65
+    TER      1        1      100.0  % $     88.69
+    TFC      1        1      100.0  % $     11.54
+    TGT      3        3      100.0  % $    117.48
+    TKO      2        2      100.0  % $    146.68
+    TMO      2        2      100.0  % $    120.70
+    TPL      2        2      100.0  % $    107.53
+    TPR      3        3      100.0  % $    209.85
+    TRGP     2        2      100.0  % $     43.32
+    TRMB     2        1      50.0   % $    -28.72
+    TROW     2        2      100.0  % $     58.17
+    TRV      2        2      100.0  % $     96.32
+    TSCO     6        6      100.0  % $    153.01
+    TSLA     4        4      100.0  % $    384.91
+    TT       3        3      100.0  % $    234.70
+    TTD      2        2      100.0  % $     62.48
+    TXN      1        1      100.0  % $     74.93
+    TXT      2        2      100.0  % $     69.90
+    TYL      1        1      100.0  % $     47.24
+    UAL      3        3      100.0  % $    169.31
+    UBER     1        1      100.0  % $     44.87
+    UDR      1        1      100.0  % $     18.02
+    UHS      5        5      100.0  % $    333.27
+    ULTA     1        1      100.0  % $    117.26
+    UNH      3        3      100.0  % $    269.28
+    UNP      2        2      100.0  % $    143.83
+    UPS      4        4      100.0  % $    239.74
+    USB      4        4      100.0  % $     66.37
+    VLO      3        3      100.0  % $    210.31
+    XYZ      3        3      100.0  % $    174.11
+
+
+  EARNINGS HIT RATE
+  ------------------------------------------------------------
+  [TODO: wire scanner_attempts per ticker into results dict]
+
+    AAPL     1 trades entered
+    ABBV     1 trades entered
+    ABNB     2 trades entered
+    ABT      3 trades entered
+    ACGL     1 trades entered
+    ACN      3 trades entered
+    ADBE     1 trades entered
+    ADI      3 trades entered
+    ADM      2 trades entered
+    ADSK     2 trades entered
+    AEE      1 trades entered
+    AEP      1 trades entered
+    AFL      2 trades entered
+    AIZ      1 trades entered
+    AJG      2 trades entered
+    ALB      6 trades entered
+    ALGN     5 trades entered
+    ALL      5 trades entered
+    AMAT     2 trades entered
+    AMCR     4 trades entered
+    AMD      2 trades entered
+    AME      2 trades entered
+    AMGN     2 trades entered
+    AMP      1 trades entered
+    AMT      2 trades entered
+    AMZN     1 trades entered
+    ANET     2 trades entered
+    AOS      2 trades entered
+    APA      5 trades entered
+    APD      3 trades entered
+    APH      1 trades entered
+    APO      4 trades entered
+    APTV     5 trades entered
+    ARE      4 trades entered
+    ARES     2 trades entered
+    AVB      1 trades entered
+    AVGO     2 trades entered
+    AVY      3 trades entered
+    AXON     1 trades entered
+    AXP      1 trades entered
+    AZO      4 trades entered
+    BA       2 trades entered
+    BAC      3 trades entered
+    BALL     1 trades entered
+    BAX      2 trades entered
+    BBY      2 trades entered
+    BDX      2 trades entered
+    BF-B     3 trades entered
+    BG       2 trades entered
+    BIIB     3 trades entered
+    BKNG     3 trades entered
+    BKR      4 trades entered
+    BLDR     4 trades entered
+    BLK      1 trades entered
+    BMY      2 trades entered
+    BNY      1 trades entered
+    BR       4 trades entered
+    BRO      2 trades entered
+    BSX      1 trades entered
+    BX       2 trades entered
+    BXP      2 trades entered
+    C        3 trades entered
+    CAG      1 trades entered
+    CASY     3 trades entered
+    CAT      5 trades entered
+    CB       4 trades entered
+    CBRE     4 trades entered
+    CCI      2 trades entered
+    CDNS     2 trades entered
+    CDW      1 trades entered
+    CEG      4 trades entered
+    CF       4 trades entered
+    CFG      1 trades entered
+    CHRW     1 trades entered
+    CI       4 trades entered
+    CIEN     5 trades entered
+    CINF     1 trades entered
+    CMCSA    2 trades entered
+    CMG      3 trades entered
+    CMI      1 trades entered
+    CNC      1 trades entered
+    CNP      1 trades entered
+    COIN     6 trades entered
+    COO      2 trades entered
+    COP      3 trades entered
+    COR      2 trades entered
+    COST     2 trades entered
+    CPAY     6 trades entered
+    CPB      2 trades entered
+    CPRT     1 trades entered
+    CPT      2 trades entered
+    CRH      2 trades entered
+    CRL      6 trades entered
+    CRM      2 trades entered
+    CRWD     2 trades entered
+    CSCO     1 trades entered
+    CSGP     1 trades entered
+    CSX      3 trades entered
+    CTAS     2 trades entered
+    CTSH     2 trades entered
+    CVS      3 trades entered
+    DAL      3 trades entered
+    DASH     3 trades entered
+    DD       1 trades entered
+    DDOG     2 trades entered
+    DE       2 trades entered
+    DECK     1 trades entered
+    DELL     2 trades entered
+    DG       3 trades entered
+    DGX      2 trades entered
+    DHR      2 trades entered
+    DLTR     4 trades entered
+    DOV      3 trades entered
+    DOW      3 trades entered
+    DRI      2 trades entered
+    DTE      1 trades entered
+    DUK      1 trades entered
+    DVN      4 trades entered
+    DXCM     3 trades entered
+    EA       1 trades entered
+    EBAY     3 trades entered
+    ED       1 trades entered
+    EFX      4 trades entered
+    EG       2 trades entered
+    EIX      2 trades entered
+    EL       5 trades entered
+    ELV      3 trades entered
+    EME      4 trades entered
+    EMR      3 trades entered
+    EOG      4 trades entered
+    EQIX     2 trades entered
+    EQR      1 trades entered
+    EQT      3 trades entered
+    ESS      2 trades entered
+    ETR      1 trades entered
+    EW       1 trades entered
+    EXC      2 trades entered
+    EXE      3 trades entered
+    EXPD     3 trades entered
+    EXPE     4 trades entered
+    EXR      1 trades entered
+    FANG     3 trades entered
+    FAST     1 trades entered
+    FCX      4 trades entered
+    FDS      4 trades entered
+    FDX      2 trades entered
+    FICO     1 trades entered
+    FIS      5 trades entered
+    FISV     2 trades entered
+    FITB     2 trades entered
+    FIX      1 trades entered
+    FSLR     3 trades entered
+    FTNT     1 trades entered
+    FTV      2 trades entered
+    GD       4 trades entered
+    GE       1 trades entered
+    GEHC     3 trades entered
+    GEN      2 trades entered
+    GEV      1 trades entered
+    GILD     2 trades entered
+    GIS      2 trades entered
+    GL       2 trades entered
+    GLW      5 trades entered
+    GM       1 trades entered
+    GNRC     2 trades entered
+    GOOG     2 trades entered
+    GOOGL    2 trades entered
+    GPC      2 trades entered
+    GPN      4 trades entered
+    GRMN     5 trades entered
+    GS       3 trades entered
+    HAL      4 trades entered
+    HAS      1 trades entered
+    HD       2 trades entered
+    HIG      1 trades entered
+    HII      7 trades entered
+    HLT      4 trades entered
+    HON      1 trades entered
+    HOOD     3 trades entered
+    HPQ      1 trades entered
+    HRL      2 trades entered
+    HSIC     3 trades entered
+    HSY      1 trades entered
+    HUBB     1 trades entered
+    HUM      3 trades entered
+    HWM      1 trades entered
+    IBKR     3 trades entered
+    IBM      2 trades entered
+    ICE      2 trades entered
+    IDXX     3 trades entered
+    IEX      1 trades entered
+    IFF      2 trades entered
+    INTC     3 trades entered
+    INTU     5 trades entered
+    INVH     2 trades entered
+    IP       4 trades entered
+    IQV      3 trades entered
+    IRM      3 trades entered
+    ISRG     1 trades entered
+    IT       5 trades entered
+    ITW      3 trades entered
+    IVZ      1 trades entered
+    J        3 trades entered
+    JBL      2 trades entered
+    JCI      1 trades entered
+    JKHY     1 trades entered
+    JNJ      1 trades entered
+    KDP      1 trades entered
+    KEYS     1 trades entered
+    KHC      6 trades entered
+    KKR      2 trades entered
+    KMB      4 trades entered
+    KMI      1 trades entered
+    KR       2 trades entered
+    LDOS     3 trades entered
+    LEN      4 trades entered
+    LHX      2 trades entered
+    LII      5 trades entered
+    LITE     3 trades entered
+    LLY      3 trades entered
+    LMT      3 trades entered
+    LOW      1 trades entered
+    LRCX     3 trades entered
+    LULU     4 trades entered
+    LUV      5 trades entered
+    LVS      2 trades entered
+    LYV      1 trades entered
+    MA       2 trades entered
+    MAA      1 trades entered
+    MAR      4 trades entered
+    MAS      2 trades entered
+    MCD      1 trades entered
+    MCHP     1 trades entered
+    MCO      4 trades entered
+    MDLZ     2 trades entered
+    MDT      3 trades entered
+    MET      2 trades entered
+    META     1 trades entered
+    MGM      2 trades entered
+    MKC      1 trades entered
+    MLM      3 trades entered
+    MMM      2 trades entered
+    MNST     1 trades entered
+    MO       1 trades entered
+    MOS      2 trades entered
+    MPC      1 trades entered
+    MPWR     1 trades entered
+    MRK      2 trades entered
+    MRNA     2 trades entered
+    MRSH     2 trades entered
+    MS       1 trades entered
+    MSCI     3 trades entered
+    MSI      1 trades entered
+    MTB      3 trades entered
+    MTD      2 trades entered
+    MU       3 trades entered
+    NDAQ     3 trades entered
+    NDSN     1 trades entered
+    NEE      3 trades entered
+    NEM      2 trades entered
+    NFLX     1 trades entered
+    NI       1 trades entered
+    NKE      1 trades entered
+    NOC      1 trades entered
+    NOW      7 trades entered
+    NRG      3 trades entered
+    NTAP     2 trades entered
+    NTRS     3 trades entered
+    NUE      1 trades entered
+    NVDA     1 trades entered
+    NVR      3 trades entered
+    NXPI     1 trades entered
+    O        1 trades entered
+    ODFL     3 trades entered
+    OKE      4 trades entered
+    OMC      2 trades entered
+    ON       4 trades entered
+    ORLY     1 trades entered
+    OTIS     2 trades entered
+    OXY      3 trades entered
+    PAYX     6 trades entered
+    PCAR     2 trades entered
+    PEG      3 trades entered
+    PEP      1 trades entered
+    PFE      2 trades entered
+    PFG      5 trades entered
+    PG       2 trades entered
+    PGR      3 trades entered
+    PH       2 trades entered
+    PHM      3 trades entered
+    PKG      4 trades entered
+    PLD      2 trades entered
+    PLTR     3 trades entered
+    PM       4 trades entered
+    PNC      1 trades entered
+    PNR      2 trades entered
+    PNW      1 trades entered
+    PODD     3 trades entered
+    POOL     3 trades entered
+    PPG      2 trades entered
+    PRU      2 trades entered
+    PSA      2 trades entered
+    PTC      1 trades entered
+    PYPL     2 trades entered
+    QCOM     3 trades entered
+    RCL      2 trades entered
+    REG      1 trades entered
+    REGN     3 trades entered
+    RJF      2 trades entered
+    RL       2 trades entered
+    ROK      4 trades entered
+    ROP      3 trades entered
+    ROST     1 trades entered
+    RSG      2 trades entered
+    RTX      2 trades entered
+    RVTY     4 trades entered
+    SATS     1 trades entered
+    SBAC     1 trades entered
+    SBUX     1 trades entered
+    SCHW     1 trades entered
+    SHW      1 trades entered
+    SJM      2 trades entered
+    SMCI     3 trades entered
+    SNA      2 trades entered
+    SNPS     1 trades entered
+    SOLV     2 trades entered
+    SPGI     1 trades entered
+    SRE      1 trades entered
+    STE      2 trades entered
+    STLD     1 trades entered
+    STT      2 trades entered
+    STX      2 trades entered
+    STZ      3 trades entered
+    SW       3 trades entered
+    SWK      3 trades entered
+    SWKS     2 trades entered
+    SYF      2 trades entered
+    SYK      2 trades entered
+    SYY      2 trades entered
+    T        1 trades entered
+    TAP      5 trades entered
+    TDG      2 trades entered
+    TDY      2 trades entered
+    TECH     5 trades entered
+    TEL      2 trades entered
+    TER      1 trades entered
+    TFC      1 trades entered
+    TGT      3 trades entered
+    TKO      2 trades entered
+    TMO      2 trades entered
+    TPL      2 trades entered
+    TPR      3 trades entered
+    TRGP     2 trades entered
+    TRMB     2 trades entered
+    TROW     2 trades entered
+    TRV      2 trades entered
+    TSCO     6 trades entered
+    TSLA     4 trades entered
+    TT       3 trades entered
+    TTD      2 trades entered
+    TXN      1 trades entered
+    TXT      2 trades entered
+    TYL      1 trades entered
+    UAL      3 trades entered
+    UBER     1 trades entered
+    UDR      1 trades entered
+    UHS      5 trades entered
+    ULTA     1 trades entered
+    UNH      3 trades entered
+    UNP      2 trades entered
+    UPS      4 trades entered
+    USB      4 trades entered
+    VLO      3 trades entered
+    XYZ      3 trades entered
+
+
+  STOCKS BY P&L (RANKED)
+  ------------------------------------------------------------
+    1    HII      $    533.37
+    2    LII      $    527.99
+    3    CRL      $    499.84
+    4    ALGN     $    494.43
+    5    EL       $    465.71
+    6    CPAY     $    441.63
+    7    NOW      $    422.46
+    8    MCO      $    408.71
+    9    IT       $    406.80
+    10   TSLA     $    384.91
+    11   FANG     $    365.82
+    12   ROK      $    365.21
+    13   FDS      $    349.99
+    14   UHS      $    333.27
+    15   ON       $    328.82
+    16   CIEN     $    327.04
+    17   FIS      $    323.48
+    18   APTV     $    319.22
+    19   EXPE     $    315.72
+    20   HLT      $    304.62
+    21   CBRE     $    303.78
+    22   ALL      $    292.85
+    23   NVR      $    290.03
+    24   IDXX     $    281.53
+    25   PKG      $    278.48
+    26   MU       $    277.14
+    27   CF       $    276.88
+    28   CI       $    276.44
+    29   FSLR     $    275.54
+    30   DLTR     $    273.47
+    31   LLY      $    273.46
+    32   UNH      $    269.28
+    33   GLW      $    269.01
+    34   EXPD     $    267.91
+    35   IQV      $    266.40
+    36   EOG      $    263.11
+    37   RVTY     $    262.98
+    38   LULU     $    261.05
+    39   AZO      $    255.81
+    40   EFX      $    251.93
+    41   DASH     $    243.14
+    42   BKNG     $    242.68
+    43   SWK      $    242.37
+    44   LMT      $    242.17
+    45   UPS      $    239.74
+    46   ACN      $    235.01
+    47   TT       $    234.70
+    48   J        $    233.85
+    49   HUM      $    233.69
+    50   COST     $    232.97
+    51   PAYX     $    229.59
+    52   ODFL     $    227.86
+    53   MLM      $    227.70
+    54   GS       $    225.64
+    55   REGN     $    224.35
+    56   AJG      $    222.65
+    57   DG       $    218.58
+    58   QCOM     $    218.08
+    59   LEN      $    217.89
+    60   HOOD     $    216.85
+    61   CB       $    213.57
+    62   TECH     $    212.86
+    63   VLO      $    210.31
+    64   RCL      $    210.24
+    65   TPR      $    209.85
+    66   EQIX     $    209.43
+    67   RL       $    207.41
+    68   POOL     $    207.10
+    69   CRM      $    206.64
+    70   TDY      $    201.88
+    71   AVY      $    201.22
+    72   SMCI     $    200.72
+    73   MAR      $    199.36
+    74   EG       $    198.30
+    75   AMD      $    198.19
+    76   MTB      $    196.87
+    77   PODD     $    194.20
+    78   MSCI     $    193.73
+    79   ABNB     $    192.79
+    80   TDG      $    192.03
+    81   STZ      $    191.10
+    82   GD       $    190.94
+    83   FDX      $    189.88
+    84   ELV      $    188.80
+    85   COP      $    188.77
+    86   AMAT     $    187.48
+    87   DOV      $    187.35
+    88   ESS      $    187.13
+    89   GPC      $    184.47
+    90   KMB      $    182.54
+    91   LRCX     $    181.86
+    92   BIIB     $    180.70
+    93   LITE     $    180.69
+    94   APD      $    179.87
+    95   ARES     $    178.14
+    96   DVN      $    176.65
+    97   PSA      $    175.37
+    98   XYZ      $    174.11
+    99   GNRC     $    172.58
+    100  LDOS     $    172.26
+    101  CASY     $    171.69
+    102  MCD      $    171.33
+    103  UAL      $    169.31
+    104  MA       $    165.94
+    105  ROP      $    164.03
+    106  IFF      $    163.81
+    107  PGR      $    163.34
+    108  TEL      $    162.65
+    109  CTAS     $    161.71
+    110  JBL      $    160.82
+    111  AMGN     $    160.19
+    112  GEHC     $    159.31
+    113  DGX      $    157.42
+    114  ITW      $    154.86
+    115  TSCO     $    153.01
+    116  ARE      $    150.13
+    117  LUV      $    149.08
+    118  TKO      $    146.68
+    119  DHR      $    146.65
+    120  NTRS     $    145.71
+    121  PPG      $    145.55
+    122  HSIC     $    145.39
+    123  ABBV     $    144.51
+    124  AVGO     $    144.24
+    125  LHX      $    144.16
+    126  UNP      $    143.83
+    127  KKR      $    143.13
+    128  NTAP     $    142.76
+    129  GOOGL    $    141.80
+    130  IRM      $    140.80
+    131  DRI      $    139.19
+    132  CRWD     $    136.67
+    133  MRSH     $    136.32
+    134  SNA      $    134.55
+    135  CDNS     $    133.59
+    136  HD       $    133.55
+    137  GOOG     $    132.33
+    138  GL       $    130.39
+    139  SNPS     $    130.26
+    140  PHM      $    130.02
+    141  EMR      $    129.78
+    142  PRU      $    129.48
+    143  C        $    127.76
+    144  EXE      $    126.33
+    145  PM       $    126.18
+    146  DAL      $    124.98
+    147  MPC      $    124.38
+    148  MMM      $    121.10
+    149  TMO      $    120.70
+    150  BG       $    120.11
+    151  JKHY     $    119.94
+    152  TGT      $    117.48
+    153  BA       $    117.42
+    154  ULTA     $    117.26
+    155  EQT      $    116.74
+    156  BDX      $    115.52
+    157  GILD     $    114.90
+    158  AFL      $    114.43
+    159  RTX      $    110.04
+    160  SYK      $    109.60
+    161  DDOG     $    109.17
+    162  TPL      $    107.53
+    163  PNR      $    106.73
+    164  OKE      $    105.82
+    165  IBKR     $    103.97
+    166  AMT      $    101.86
+    167  CMI      $    101.60
+    168  MSI      $    100.69
+    169  AME      $    100.49
+    170  ABT      $    100.07
+    171  RSG      $     99.93
+    172  ICE      $     99.35
+    173  MRK      $     98.72
+    174  FIX      $     98.64
+    175  BSX      $     98.49
+    176  GE       $     98.11
+    177  PG       $     97.37
+    178  PH       $     97.35
+    179  TRV      $     96.32
+    180  PYPL     $     96.00
+    181  MGM      $     95.37
+    182  EBAY     $     94.45
+    183  FICO     $     92.56
+    184  FTV      $     91.93
+    185  AMCR     $     91.09
+    186  COO      $     90.71
+    187  JNJ      $     90.47
+    188  CTSH     $     90.03
+    189  STT      $     89.70
+    190  SWKS     $     89.66
+    191  SYF      $     89.65
+    192  AMZN     $     89.57
+    193  ISRG     $     89.32
+    194  META     $     89.23
+    195  NVDA     $     88.82
+    196  TER      $     88.69
+    197  BX       $     88.22
+    198  HSY      $     88.09
+    199  MDT      $     87.89
+    200  CVS      $     87.31
+    201  CRH      $     87.27
+    202  BF-B     $     86.53
+    203  AXON     $     86.43
+    204  MAS      $     86.13
+    205  IBM      $     85.70
+    206  DOW      $     84.44
+    207  MPWR     $     83.02
+    208  SBAC     $     81.32
+    209  CSGP     $     80.97
+    210  AOS      $     80.65
+    211  RJF      $     79.45
+    212  SJM      $     79.12
+    213  BKR      $     77.71
+    214  EXR      $     77.52
+    215  PCAR     $     77.47
+    216  BLK      $     77.30
+    217  BR       $     77.24
+    218  AXP      $     75.99
+    219  LOW      $     74.94
+    220  TXN      $     74.93
+    221  NRG      $     74.88
+    222  NDAQ     $     74.63
+    223  NEE      $     73.97
+    224  FCX      $     73.54
+    225  CDW      $     73.46
+    226  CPT      $     73.26
+    227  LVS      $     73.26
+    228  PLD      $     72.99
+    229  PEG      $     72.92
+    230  NOC      $     71.46
+    231  NXPI     $     70.60
+    232  CSCO     $     70.53
+    233  BXP      $     70.37
+    234  HAL      $     70.28
+    235  TXT      $     69.90
+    236  AAPL     $     68.71
+    237  KHC      $     68.40
+    238  SPGI     $     68.37
+    239  OXY      $     67.92
+    240  SOLV     $     67.81
+    241  PNC      $     66.64
+    242  STE      $     66.63
+    243  IP       $     66.55
+    244  USB      $     66.37
+    245  MNST     $     65.37
+    246  OTIS     $     65.24
+    247  TAP      $     65.13
+    248  SW       $     62.52
+    249  TTD      $     62.48
+    250  NDSN     $     62.15
+    251  STX      $     61.87
+    252  AVB      $     61.66
+    253  MS       $     61.42
+    254  FISV     $     59.93
+    255  CHRW     $     58.84
+    256  TROW     $     58.17
+    257  AMP      $     57.57
+    258  CSX      $     56.84
+    259  HWM      $     56.52
+    260  SCHW     $     56.48
+    261  GIS      $     55.29
+    262  ADBE     $     55.24
+    263  GEV      $     55.12
+    264  CCI      $     53.79
+    265  HUBB     $     52.98
+    266  BMY      $     52.89
+    267  SRE      $     51.41
+    268  KEYS     $     51.17
+    269  NUE      $     50.89
+    270  SHW      $     50.70
+    271  BBY      $     50.62
+    272  ORLY     $     50.54
+    273  APH      $     50.54
+    274  PEP      $     50.04
+    275  EIX      $     49.95
+    276  AIZ      $     49.57
+    277  FTNT     $     49.36
+    278  SYY      $     48.49
+    279  KR       $     48.41
+    280  BRO      $     48.05
+    281  TYL      $     47.24
+    282  IEX      $     47.13
+    283  SATS     $     46.89
+    284  PFG      $     46.73
+    285  CMG      $     45.11
+    286  EW       $     45.06
+    287  UBER     $     44.87
+    288  NEM      $     44.14
+    289  PTC      $     43.96
+    290  FITB     $     43.95
+    291  MET      $     43.49
+    292  TRGP     $     43.32
+    293  BAC      $     43.32
+    294  HAS      $     42.62
+    295  MCHP     $     40.73
+    296  NKE      $     39.74
+    297  MAA      $     39.70
+    298  OMC      $     38.66
+    299  CNC      $     38.56
+    300  MRNA     $     38.48
+    301  REG      $     38.18
+    302  ADM      $     37.63
+    303  BAX      $     37.15
+    304  HON      $     37.02
+    305  BALL     $     33.29
+    306  DECK     $     32.48
+    307  MKC      $     31.97
+    308  SBUX     $     30.95
+    309  INTC     $     29.10
+    310  EA       $     29.08
+    311  IVZ      $     28.52
+    312  EXC      $     28.37
+    313  AEE      $     27.00
+    314  CFG      $     26.56
+    315  STLD     $     26.55
+    316  MDLZ     $     26.26
+    317  ACGL     $     26.07
+    318  ROST     $     24.78
+    319  GM       $     24.42
+    320  MOS      $     22.38
+    321  LYV      $     21.70
+    322  DTE      $     21.17
+    323  AEP      $     20.87
+    324  HRL      $     20.49
+    325  EME      $     20.02
+    326  CMCSA    $     19.97
+    327  CINF     $     19.71
+    328  NI       $     18.58
+    329  O        $     18.48
+    330  ED       $     18.04
+    331  UDR      $     18.02
+    332  CAG      $     17.20
+    333  PNW      $     16.29
+    334  MO       $     16.23
+    335  ETR      $     13.33
+    336  DUK      $     12.68
+    337  TFC      $     11.54
+    338  JCI      $     11.33
+    339  HPQ      $     11.29
+    340  INVH     $     11.24
+    341  CPB      $     11.04
+    342  KDP      $      9.03
+    343  HIG      $      8.97
+    344  NFLX     $      8.83
+    345  PFE      $      8.17
+    346  GEN      $      7.58
+    347  FAST     $      7.27
+    348  EQR      $      6.97
+    349  CPRT     $      6.34
+    350  T        $      5.81
+    351  BNY      $      3.33
+    352  DD       $      2.72
+    353  KMI      $      1.68
+    354  CNP      $      0.54
+    355  TRMB     $    -28.72
+    356  GRMN     $    -51.87
+    357  APA      $    -91.18
+    358  ALB      $   -133.38
+    359  COR      $   -141.78
+    360  CEG      $   -169.45
+    361  DXCM     $   -213.10
+    362  GPN      $   -221.45
+    363  INTU     $   -262.83
+    364  ADI      $   -296.60
+    365  PLTR     $   -321.43
+    366  BLDR     $   -350.14
+    367  CAT      $   -360.79
+    368  APO      $   -395.32
+    369  ADSK     $   -409.18
+    370  ANET     $   -442.42
+    371  MTD      $   -462.83
+    372  DE       $   -528.97
+    373  DELL     $   -585.53
+    374  COIN     $   -897.49
+
+
+  YEARLY BREAKDOWN BY TICKER
+  ------------------------------------------------------------
+    2022
+      Ticker   Trades   Wins   Win%     P&L
+      ADI      1        0      0.0    % $   -459.63
+      ADSK     1        0      0.0    % $   -497.78
+      ALB      1        1      100.0  % $     83.25
+      ALL      1        1      100.0  % $     89.39
+      AMCR     1        1      100.0  % $     16.00
+      AMD      1        1      100.0  % $    100.00
+      APTV     1        1      100.0  % $    100.74
+      AVY      1        1      100.0  % $     75.42
+      BA       1        1      100.0  % $     74.30
+      BG       1        1      100.0  % $     67.82
+      BIIB     1        1      100.0  % $     51.51
+      BKNG     1        1      100.0  % $     27.22
+      BLDR     1        1      100.0  % $     84.88
+      BX       1        1      100.0  % $     52.72
+      CAG      1        1      100.0  % $     17.20
+      CASY     1        1      100.0  % $     53.14
+      CAT      1        1      100.0  % $     75.11
+      CB       1        1      100.0  % $     33.78
+      CBRE     1        1      100.0  % $     61.30
+      CDNS     1        1      100.0  % $     65.94
+      CEG      1        1      100.0  % $     60.99
+      CF       1        1      100.0  % $    107.55
+      COIN     1        1      100.0  % $     71.42
+      COO      1        1      100.0  % $     41.13
+      COP      1        1      100.0  % $     37.32
+      COST     1        1      100.0  % $    166.02
+      CPAY     1        1      100.0  % $     82.62
+      CPT      1        1      100.0  % $     57.45
+      CRL      1        1      100.0  % $    126.07
+      CSX      1        1      100.0  % $     30.56
+      CTAS     1        1      100.0  % $     46.95
+      DAL      1        1      100.0  % $     22.71
+      DG       1        1      100.0  % $     57.33
+      DOW      1        1      100.0  % $     11.48
+      DRI      1        1      100.0  % $     75.47
+      EBAY     1        1      100.0  % $      5.41
+      EL       1        1      100.0  % $    190.75
+      EOG      1        1      100.0  % $     53.46
+      EQT      1        1      100.0  % $     56.91
+      EXC      2        2      100.0  % $     28.37
+      EXPE     1        1      100.0  % $     71.48
+      FCX      1        1      100.0  % $     14.06
+      FDX      1        1      100.0  % $     63.39
+      FIS      2        2      100.0  % $    133.63
+      FITB     2        2      100.0  % $     43.95
+      GIS      1        1      100.0  % $     21.69
+      GOOG     1        1      100.0  % $     41.21
+      GOOGL    1        1      100.0  % $     43.55
+      GPN      1        0      0.0    % $   -407.00
+      GRMN     1        1      100.0  % $     57.11
+      HAS      1        1      100.0  % $     42.62
+      HIG      1        1      100.0  % $      8.97
+      HII      1        1      100.0  % $     42.43
+      HRL      1        1      100.0  % $     14.95
+      IFF      1        1      100.0  % $     46.59
+      INTU     1        0      0.0    % $   -617.70
+      J        1        1      100.0  % $     38.74
+      KHC      1        1      100.0  % $     23.32
+      LDOS     1        1      100.0  % $     33.65
+      LEN      2        2      100.0  % $    109.85
+      LITE     1        1      100.0  % $     61.18
+      LMT      1        1      100.0  % $     84.85
+      LULU     1        1      100.0  % $    103.41
+      LUV      1        1      100.0  % $     11.88
+      MAR      1        1      100.0  % $     40.06
+      MAS      1        1      100.0  % $     46.82
+      MGM      1        1      100.0  % $     68.12
+      MRSH     1        1      100.0  % $     75.85
+      MU       1        1      100.0  % $     55.99
+      NDAQ     1        1      100.0  % $     38.24
+      NEM      1        1      100.0  % $     31.07
+      NI       1        1      100.0  % $     18.58
+      NKE      1        1      100.0  % $     39.74
+      NOW      1        1      100.0  % $     63.47
+      NTRS     1        1      100.0  % $     36.99
+      ON       1        1      100.0  % $     66.86
+      PAYX     1        1      100.0  % $     36.18
+      PEG      1        1      100.0  % $     29.62
+      PG       1        1      100.0  % $     44.49
+      PHM      2        2      100.0  % $     66.22
+      PKG      1        1      100.0  % $     87.22
+      PLD      1        1      100.0  % $     41.85
+      POOL     1        1      100.0  % $     68.29
+      RL       1        1      100.0  % $     97.09
+      ROK      1        1      100.0  % $     86.79
+      RSG      1        1      100.0  % $     66.53
+      RVTY     1        1      100.0  % $    101.73
+      SHW      1        1      100.0  % $     50.70
+      SNA      1        1      100.0  % $     84.00
+      STZ      1        1      100.0  % $     56.10
+      SWK      1        1      100.0  % $     54.57
+      TAP      1        1      100.0  % $     13.73
+      TDY      1        1      100.0  % $    129.49
+      TEL      1        1      100.0  % $     88.39
+      TGT      1        1      100.0  % $     52.63
+      TMO      1        1      100.0  % $     77.04
+      TPL      1        1      100.0  % $     77.44
+      TRGP     1        1      100.0  % $     20.77
+      TSCO     1        1      100.0  % $      7.43
+      TTD      1        1      100.0  % $     47.95
+      TYL      1        1      100.0  % $     47.24
+      UDR      1        1      100.0  % $     18.02
+      UNP      1        1      100.0  % $     83.56
+      UPS      1        1      100.0  % $     85.09
+    2023
+      Ticker   Trades   Wins   Win%     P&L
+      ABNB     1        1      100.0  % $     70.83
+      ABT      1        1      100.0  % $     19.96
+      ACN      2        2      100.0  % $    104.01
+      ADBE     1        1      100.0  % $     55.24
+      ADM      1        1      100.0  % $     20.88
+      AEE      1        1      100.0  % $     27.00
+      AEP      1        1      100.0  % $     20.87
+      ALL      3        3      100.0  % $    158.79
+      AMAT     1        1      100.0  % $     98.06
+      AMCR     1        1      100.0  % $     11.30
+      AME      1        1      100.0  % $     49.77
+      AMGN     1        1      100.0  % $    104.13
+      AMT      2        2      100.0  % $    101.86
+      AOS      2        2      100.0  % $     80.65
+      APA      3        3      100.0  % $     44.15
+      APD      1        1      100.0  % $     75.61
+      APO      1        1      100.0  % $     42.35
+      ARE      1        1      100.0  % $     39.00
+      ARES     1        1      100.0  % $     84.05
+      AVGO     1        1      100.0  % $     76.17
+      AVY      1        1      100.0  % $     90.02
+      AZO      2        2      100.0  % $    136.68
+      BA       1        1      100.0  % $     43.12
+      BAX      2        2      100.0  % $     37.15
+      BBY      2        2      100.0  % $     50.62
+      BDX      1        1      100.0  % $     78.06
+      BNY      1        1      100.0  % $      3.33
+      CAT      2        2      100.0  % $    125.95
+      CBRE     1        1      100.0  % $     60.92
+      CCI      1        1      100.0  % $     36.76
+      CDNS     1        1      100.0  % $     67.65
+      CEG      1        0      0.0    % $   -456.86
+      CF       2        2      100.0  % $     91.54
+      CHRW     1        1      100.0  % $     58.84
+      CI       1        1      100.0  % $     70.53
+      CIEN     1        1      100.0  % $     52.96
+      CINF     1        1      100.0  % $     19.71
+      CNP      1        1      100.0  % $      0.54
+      COIN     2        2      100.0  % $    120.02
+      COP      2        2      100.0  % $    151.44
+      COR      1        0      0.0    % $   -216.49
+      CPAY     2        2      100.0  % $    160.04
+      CRL      3        3      100.0  % $    213.59
+      CTSH     1        1      100.0  % $     30.57
+      CVS      1        1      100.0  % $      3.34
+      DAL      1        1      100.0  % $     20.89
+      DECK     1        1      100.0  % $     32.48
+      DG       1        1      100.0  % $     95.82
+      DHR      1        1      100.0  % $     53.75
+      DLTR     2        2      100.0  % $    166.80
+      DOV      2        2      100.0  % $    101.63
+      DUK      1        1      100.0  % $     12.68
+      DXCM     1        0      0.0    % $   -328.74
+      EA       1        1      100.0  % $     29.08
+      EBAY     1        1      100.0  % $     23.45
+      EG       1        1      100.0  % $    104.78
+      EIX      1        1      100.0  % $     17.58
+      EL       1        1      100.0  % $     52.57
+      EOG      2        2      100.0  % $    156.56
+      EQT      1        1      100.0  % $      5.27
+      ESS      1        1      100.0  % $    106.14
+      ETR      1        1      100.0  % $     13.33
+      EXE      3        3      100.0  % $    126.33
+      EXPE     2        2      100.0  % $    193.13
+      EXR      1        1      100.0  % $     77.52
+      FANG     1        1      100.0  % $     91.14
+      FAST     1        1      100.0  % $      7.27
+      FDS      3        3      100.0  % $    268.33
+      FIS      1        1      100.0  % $     67.02
+      FTNT     1        1      100.0  % $     49.36
+      GILD     1        1      100.0  % $     51.44
+      GIS      1        1      100.0  % $     33.60
+      GL       1        1      100.0  % $     18.66
+      GLW      2        2      100.0  % $     43.99
+      GOOG     1        1      100.0  % $     91.11
+      GOOGL    1        1      100.0  % $     98.26
+      GRMN     1        1      100.0  % $     11.73
+      GS       1        1      100.0  % $     51.07
+      HAL      3        3      100.0  % $     58.09
+      HII      2        2      100.0  % $    153.55
+      HLT      1        1      100.0  % $     78.53
+      HSIC     1        1      100.0  % $     38.48
+      HUBB     1        1      100.0  % $     52.98
+      HUM      1        1      100.0  % $     52.29
+      IBM      1        1      100.0  % $     26.88
+      ICE      1        1      100.0  % $     32.46
+      IDXX     2        2      100.0  % $    164.53
+      IEX      1        1      100.0  % $     47.13
+      INTC     2        2      100.0  % $     18.03
+      INTU     2        2      100.0  % $    205.71
+      IP       1        1      100.0  % $      1.42
+      IQV      1        1      100.0  % $     93.21
+      IRM      2        2      100.0  % $     58.29
+      IT       1        1      100.0  % $     67.03
+      ITW      1        1      100.0  % $     73.89
+      J        1        1      100.0  % $     51.40
+      JCI      1        1      100.0  % $     11.33
+      KHC      1        1      100.0  % $      1.51
+      KR       1        1      100.0  % $     16.82
+      LDOS     1        1      100.0  % $     62.86
+      LEN      1        1      100.0  % $     41.40
+      LHX      1        1      100.0  % $     85.74
+      LII      1        1      100.0  % $     96.80
+      LITE     1        1      100.0  % $     48.19
+      LLY      2        2      100.0  % $    219.56
+      LMT      1        1      100.0  % $     96.04
+      LRCX     1        1      100.0  % $     21.52
+      LULU     1        1      100.0  % $     54.17
+      LUV      2        2      100.0  % $     56.53
+      LVS      1        1      100.0  % $     53.52
+      MAR      1        1      100.0  % $     48.46
+      MCHP     1        1      100.0  % $     40.73
+      MDLZ     1        1      100.0  % $      6.03
+      MET      1        1      100.0  % $     18.04
+      MGM      1        1      100.0  % $     27.25
+      MOS      1        1      100.0  % $      7.85
+      MPWR     1        1      100.0  % $     83.02
+      MRK      1        1      100.0  % $     35.13
+      MTD      1        0      0.0    % $   -590.42
+      NDAQ     1        1      100.0  % $     35.34
+      NDSN     1        1      100.0  % $     62.15
+      NEM      1        1      100.0  % $     13.07
+      NFLX     1        1      100.0  % $      8.83
+      NOC      1        1      100.0  % $     71.46
+      NOW      3        3      100.0  % $    180.45
+      NRG      2        2      100.0  % $      2.99
+      NTRS     1        1      100.0  % $     51.53
+      NUE      1        1      100.0  % $     50.89
+      O        1        1      100.0  % $     18.48
+      ODFL     1        1      100.0  % $     92.68
+      OKE      2        2      100.0  % $     13.16
+      PAYX     1        1      100.0  % $     35.06
+      PCAR     1        1      100.0  % $     28.35
+      PEG      1        1      100.0  % $      5.04
+      PKG      1        1      100.0  % $     65.46
+      PLD      1        1      100.0  % $     31.14
+      PM       3        3      100.0  % $     71.80
+      PNW      1        1      100.0  % $     16.29
+      PODD     1        1      100.0  % $     50.19
+      POOL     1        1      100.0  % $     47.61
+      PPG      1        1      100.0  % $     48.87
+      PRU      1        1      100.0  % $     38.68
+      PSA      2        2      100.0  % $    175.37
+      PYPL     1        1      100.0  % $     44.16
+      QCOM     1        1      100.0  % $     74.21
+      RCL      1        1      100.0  % $     61.30
+      REG      1        1      100.0  % $     38.18
+      REGN     1        1      100.0  % $     93.27
+      ROST     1        1      100.0  % $     24.78
+      RSG      1        1      100.0  % $     33.40
+      RTX      1        1      100.0  % $     23.17
+      RVTY     1        1      100.0  % $      9.71
+      SBAC     1        1      100.0  % $     81.32
+      SJM      1        1      100.0  % $     34.95
+      SMCI     1        1      100.0  % $     30.60
+      STE      1        1      100.0  % $     17.41
+      STT      1        1      100.0  % $     51.89
+      STX      1        1      100.0  % $     43.64
+      STZ      1        1      100.0  % $     81.09
+      SYK      1        1      100.0  % $     76.93
+      SYY      1        1      100.0  % $      6.91
+      TAP      1        1      100.0  % $     16.43
+      TECH     1        1      100.0  % $     37.38
+      TGT      1        1      100.0  % $     35.61
+      TRGP     1        1      100.0  % $     22.55
+      TRMB     2        1      50.0   % $    -28.72
+      TROW     1        1      100.0  % $     28.69
+      TSCO     1        1      100.0  % $      9.09
+      TT       1        1      100.0  % $     69.28
+      TXT      1        1      100.0  % $     47.85
+      XYZ      2        2      100.0  % $     82.56
+    2024
+      Ticker   Trades   Wins   Win%     P&L
+      AAPL     1        1      100.0  % $     68.71
+      ABT      1        1      100.0  % $     11.02
+      ADI      1        1      100.0  % $     90.31
+      ADM      1        1      100.0  % $     16.74
+      ADSK     1        1      100.0  % $     88.60
+      AIZ      1        1      100.0  % $     49.57
+      ALB      2        1      50.0   % $   -459.93
+      ALGN     2        2      100.0  % $    274.03
+      ALL      1        1      100.0  % $     44.67
+      AMD      1        1      100.0  % $     98.19
+      AMZN     1        1      100.0  % $     89.57
+      ANET     1        1      100.0  % $     79.90
+      APD      1        1      100.0  % $     56.90
+      APTV     2        2      100.0  % $     63.86
+      ARE      2        2      100.0  % $     64.10
+      AVB      1        1      100.0  % $     61.66
+      BF-B     1        1      100.0  % $     41.71
+      BKR      2        2      100.0  % $     19.11
+      BLDR     2        2      100.0  % $    139.76
+      BR       1        0      0.0    % $   -164.97
+      BRO      2        2      100.0  % $     48.05
+      BXP      2        2      100.0  % $     70.37
+      CASY     1        1      100.0  % $     47.31
+      CAT      1        1      100.0  % $     95.52
+      CB       1        1      100.0  % $     42.26
+      CCI      1        1      100.0  % $     17.03
+      CEG      1        1      100.0  % $     94.91
+      CI       2        2      100.0  % $    117.70
+      CIEN     2        2      100.0  % $     74.96
+      CMCSA    1        1      100.0  % $      8.69
+      COIN     1        1      100.0  % $     98.90
+      COO      1        1      100.0  % $     49.59
+      CPAY     1        1      100.0  % $     50.11
+      CPB      1        1      100.0  % $      8.89
+      CPRT     1        1      100.0  % $      6.34
+      CPT      1        1      100.0  % $     15.81
+      CRH      1        1      100.0  % $     33.36
+      CRM      1        1      100.0  % $     69.51
+      CRWD     1        1      100.0  % $     58.83
+      CSX      1        1      100.0  % $     14.33
+      CTAS     1        1      100.0  % $    114.76
+      CVS      1        1      100.0  % $     19.91
+      DD       1        1      100.0  % $      2.72
+      DDOG     2        2      100.0  % $    109.17
+      DE       1        0      0.0    % $   -616.95
+      DG       1        1      100.0  % $     65.43
+      DGX      1        1      100.0  % $     61.19
+      DLTR     1        1      100.0  % $     60.34
+      DOW      1        1      100.0  % $     15.13
+      DTE      1        1      100.0  % $     21.17
+      DVN      1        1      100.0  % $     12.95
+      EL       2        2      100.0  % $    132.99
+      ELV      1        1      100.0  % $     63.45
+      EME      1        1      100.0  % $     87.38
+      EMR      1        1      100.0  % $     61.02
+      EQR      1        1      100.0  % $      6.97
+      ESS      1        1      100.0  % $     80.99
+      EXPD     1        1      100.0  % $     78.78
+      EXPE     1        1      100.0  % $     51.12
+      FANG     1        1      100.0  % $    122.05
+      FCX      2        2      100.0  % $     24.44
+      FISV     1        1      100.0  % $     44.45
+      FIX      1        1      100.0  % $     98.64
+      FSLR     2        2      100.0  % $    209.85
+      GD       1        1      100.0  % $     47.50
+      GE       1        1      100.0  % $     98.11
+      GEHC     2        2      100.0  % $    116.93
+      GEN      1        1      100.0  % $      0.15
+      GEV      1        1      100.0  % $     55.12
+      GLW      1        1      100.0  % $     32.22
+      GNRC     1        1      100.0  % $     69.76
+      GPC      2        2      100.0  % $    184.47
+      GS       1        1      100.0  % $    105.85
+      HII      2        2      100.0  % $    173.17
+      HLT      1        1      100.0  % $     34.92
+      HON      1        1      100.0  % $     37.02
+      HOOD     1        1      100.0  % $     33.09
+      HRL      1        1      100.0  % $      5.54
+      HSIC     1        1      100.0  % $     59.22
+      HUM      1        1      100.0  % $    115.37
+      IBKR     1        0      0.0    % $     -1.26
+      IDXX     1        1      100.0  % $    117.01
+      INTC     1        1      100.0  % $     11.07
+      INTU     1        1      100.0  % $     86.28
+      INVH     1        1      100.0  % $      9.21
+      IRM      1        1      100.0  % $     82.52
+      ISRG     1        1      100.0  % $     89.32
+      IT       2        2      100.0  % $    123.75
+      ITW      1        1      100.0  % $     47.52
+      KHC      2        2      100.0  % $     22.17
+      KMB      2        2      100.0  % $     99.70
+      LII      2        2      100.0  % $    224.14
+      LITE     1        1      100.0  % $     71.32
+      LRCX     2        2      100.0  % $    160.35
+      LULU     1        1      100.0  % $     45.84
+      LVS      1        1      100.0  % $     19.74
+      LYV      1        1      100.0  % $     21.70
+      MA       1        1      100.0  % $     54.20
+      MCO      1        1      100.0  % $    148.17
+      MDT      2        2      100.0  % $     53.07
+      MLM      1        1      100.0  % $     61.66
+      MRSH     1        1      100.0  % $     60.46
+      MS       1        1      100.0  % $     61.42
+      MSCI     1        1      100.0  % $     74.66
+      MTB      2        2      100.0  % $    163.66
+      MU       1        1      100.0  % $     76.18
+      NDAQ     1        1      100.0  % $      1.05
+      NEE      1        1      100.0  % $     12.08
+      NTAP     1        1      100.0  % $     62.01
+      NTRS     1        1      100.0  % $     57.19
+      ODFL     1        1      100.0  % $     94.82
+      OKE      1        1      100.0  % $     42.80
+      OMC      1        1      100.0  % $     21.19
+      ON       1        1      100.0  % $    103.46
+      OXY      1        1      100.0  % $      9.15
+      PAYX     1        1      100.0  % $     17.52
+      PEG      1        1      100.0  % $     38.26
+      PFG      3        2      66.7   % $    -16.43
+      PH       1        1      100.0  % $     43.62
+      PLTR     1        1      100.0  % $     15.09
+      POOL     1        1      100.0  % $     91.20
+      PTC      1        1      100.0  % $     43.96
+      QCOM     1        1      100.0  % $     42.96
+      ROK      2        2      100.0  % $    178.27
+      ROP      1        1      100.0  % $     65.63
+      RVTY     1        1      100.0  % $     60.90
+      SMCI     1        1      100.0  % $     95.85
+      SNA      1        1      100.0  % $     50.55
+      SOLV     1        1      100.0  % $     40.66
+      STLD     1        1      100.0  % $     26.55
+      STX      1        1      100.0  % $     18.23
+      SWKS     1        1      100.0  % $     50.80
+      TAP      1        1      100.0  % $     10.90
+      TDG      1        1      100.0  % $    104.21
+      TDY      1        1      100.0  % $     72.39
+      TECH     1        1      100.0  % $     43.78
+      TFC      1        1      100.0  % $     11.54
+      TKO      1        1      100.0  % $     65.88
+      TMO      1        1      100.0  % $     43.65
+      TPL      1        1      100.0  % $     30.09
+      TSCO     1        1      100.0  % $     15.86
+      TSLA     1        1      100.0  % $     85.85
+      TT       1        1      100.0  % $     54.02
+      TXN      1        1      100.0  % $     74.93
+      UAL      1        1      100.0  % $     12.55
+      UBER     1        1      100.0  % $     44.87
+      UHS      1        1      100.0  % $     49.14
+      ULTA     1        1      100.0  % $    117.26
+      UNH      1        1      100.0  % $     63.89
+      UPS      1        1      100.0  % $     53.95
+      USB      1        1      100.0  % $     20.50
+      VLO      1        1      100.0  % $     79.68
+      XYZ      1        1      100.0  % $     91.55
+    2025
+      Ticker   Trades   Wins   Win%     P&L
+      ABT      1        1      100.0  % $     69.09
+      ACGL     1        1      100.0  % $     26.07
+      ACN      1        1      100.0  % $    131.00
+      ADI      1        1      100.0  % $     72.72
+      AFL      2        2      100.0  % $    114.43
+      AJG      1        1      100.0  % $    127.71
+      ALB      3        3      100.0  % $    243.30
+      ALGN     1        1      100.0  % $     72.40
+      AMAT     1        1      100.0  % $     89.42
+      AMCR     1        1      100.0  % $     42.55
+      AME      1        1      100.0  % $     50.72
+      AMGN     1        1      100.0  % $     56.06
+      AMP      1        1      100.0  % $     57.57
+      ANET     1        0      0.0    % $   -522.32
+      APA      1        0      0.0    % $   -190.33
+      APD      1        1      100.0  % $     47.36
+      APO      2        2      100.0  % $    151.33
+      ARE      1        1      100.0  % $     47.03
+      AVGO     1        1      100.0  % $     68.07
+      AVY      1        1      100.0  % $     35.78
+      AXON     1        1      100.0  % $     86.43
+      AZO      1        1      100.0  % $     52.66
+      BAC      3        3      100.0  % $     43.32
+      BF-B     2        2      100.0  % $     44.83
+      BG       1        1      100.0  % $     52.30
+      BIIB     2        2      100.0  % $    129.20
+      BKNG     1        1      100.0  % $    132.40
+      BKR      2        2      100.0  % $     58.59
+      BLDR     1        0      0.0    % $   -574.78
+      BLK      1        1      100.0  % $     77.30
+      BMY      2        2      100.0  % $     52.89
+      BR       1        1      100.0  % $     78.73
+      BX       1        1      100.0  % $     35.50
+      C        2        2      100.0  % $     68.17
+      CASY     1        1      100.0  % $     71.24
+      CAT      1        0      0.0    % $   -657.37
+      CB       2        2      100.0  % $    137.52
+      CBRE     1        1      100.0  % $     56.37
+      CDW      1        1      100.0  % $     73.46
+      CFG      1        1      100.0  % $     26.56
+      CI       1        1      100.0  % $     88.22
+      CIEN     1        1      100.0  % $     61.89
+      CMCSA    1        1      100.0  % $     11.27
+      CMG      1        1      100.0  % $     37.59
+      CNC      1        1      100.0  % $     38.56
+      COIN     2        0      0.0    % $ -1,187.82
+      CPB      1        1      100.0  % $      2.15
+      CRH      1        1      100.0  % $     53.92
+      CRL      1        1      100.0  % $     64.57
+      CRWD     1        1      100.0  % $     77.84
+      CSGP     1        1      100.0  % $     80.97
+      CSX      1        1      100.0  % $     11.95
+      DAL      1        1      100.0  % $     81.38
+      DASH     1        1      100.0  % $    134.74
+      DE       1        1      100.0  % $     87.98
+      DELL     2        1      50.0   % $   -585.53
+      DGX      1        1      100.0  % $     96.23
+      DHR      1        1      100.0  % $     92.90
+      DVN      3        3      100.0  % $    163.69
+      DXCM     1        1      100.0  % $     47.79
+      ED       1        1      100.0  % $     18.04
+      EFX      2        2      100.0  % $    136.40
+      EG       1        1      100.0  % $     93.52
+      EIX      1        1      100.0  % $     32.38
+      ELV      1        1      100.0  % $     47.51
+      EME      2        1      50.0   % $   -164.36
+      EMR      2        2      100.0  % $     68.76
+      EOG      1        1      100.0  % $     53.09
+      EQIX     2        2      100.0  % $    209.43
+      EQT      1        1      100.0  % $     54.57
+      EXPD     1        1      100.0  % $    124.11
+      FANG     1        1      100.0  % $    152.63
+      FDS      1        1      100.0  % $     81.66
+      FICO     1        1      100.0  % $     92.56
+      FIS      2        2      100.0  % $    122.83
+      FSLR     1        1      100.0  % $     65.70
+      FTV      1        1      100.0  % $     49.58
+      GD       2        2      100.0  % $     88.40
+      GEN      1        1      100.0  % $      7.43
+      GL       1        1      100.0  % $    111.73
+      GLW      1        1      100.0  % $     62.90
+      GM       1        1      100.0  % $     24.42
+      GNRC     1        1      100.0  % $    102.81
+      GPN      3        3      100.0  % $    185.55
+      GRMN     2        2      100.0  % $    258.59
+      GS       1        1      100.0  % $     68.72
+      HAL      1        1      100.0  % $     12.19
+      HD       1        1      100.0  % $     79.53
+      HII      1        1      100.0  % $     63.58
+      HLT      1        1      100.0  % $     82.91
+      HPQ      1        1      100.0  % $     11.29
+      HSIC     1        1      100.0  % $     47.69
+      HSY      1        1      100.0  % $     88.09
+      HUM      1        1      100.0  % $     66.02
+      HWM      1        1      100.0  % $     56.52
+      IBKR     2        2      100.0  % $    105.23
+      IBM      1        1      100.0  % $     58.82
+      IFF      1        1      100.0  % $    117.23
+      INTU     1        1      100.0  % $     62.87
+      INVH     1        1      100.0  % $      2.02
+      IP       1        1      100.0  % $      5.03
+      IQV      1        1      100.0  % $    103.16
+      IT       1        1      100.0  % $    110.84
+      ITW      1        1      100.0  % $     33.44
+      J        1        1      100.0  % $    143.71
+      JBL      2        2      100.0  % $    160.82
+      JNJ      1        1      100.0  % $     90.47
+      KDP      1        1      100.0  % $      9.03
+      KHC      2        2      100.0  % $     21.40
+      KKR      1        1      100.0  % $     50.27
+      KMI      1        1      100.0  % $      1.68
+      KR       1        1      100.0  % $     31.60
+      LHX      1        1      100.0  % $     58.43
+      LII      1        1      100.0  % $     68.27
+      LLY      1        1      100.0  % $     53.89
+      LMT      1        1      100.0  % $     61.28
+      LOW      1        1      100.0  % $     74.94
+      LUV      1        1      100.0  % $     24.46
+      MAA      1        1      100.0  % $     39.70
+      MAR      2        2      100.0  % $    110.84
+      MAS      1        1      100.0  % $     39.31
+      MCD      1        1      100.0  % $    171.33
+      MCO      2        2      100.0  % $    173.88
+      MDLZ     1        1      100.0  % $     20.23
+      MET      1        1      100.0  % $     25.45
+      MKC      1        1      100.0  % $     31.97
+      MLM      1        1      100.0  % $     51.27
+      MMM      1        1      100.0  % $     63.13
+      MNST     1        1      100.0  % $     65.37
+      MO       1        1      100.0  % $     16.23
+      MPC      1        1      100.0  % $    124.38
+      MRNA     2        2      100.0  % $     38.48
+      MSCI     2        2      100.0  % $    119.08
+      MSI      1        1      100.0  % $    100.69
+      MTB      1        1      100.0  % $     33.21
+      MTD      1        1      100.0  % $    127.59
+      MU       1        1      100.0  % $    144.96
+      NEE      2        2      100.0  % $     61.90
+      NOW      2        2      100.0  % $     91.16
+      NRG      1        1      100.0  % $     71.88
+      NVDA     1        1      100.0  % $     88.82
+      NVR      2        2      100.0  % $    180.71
+      NXPI     1        1      100.0  % $     70.60
+      OKE      1        1      100.0  % $     49.87
+      OMC      1        1      100.0  % $     17.47
+      ON       2        2      100.0  % $    158.50
+      ORLY     1        1      100.0  % $     50.54
+      OTIS     1        1      100.0  % $     44.66
+      OXY      1        1      100.0  % $     33.02
+      PAYX     2        2      100.0  % $    121.74
+      PCAR     1        1      100.0  % $     49.12
+      PEP      1        1      100.0  % $     50.04
+      PFE      2        2      100.0  % $      8.17
+      PFG      2        2      100.0  % $     63.16
+      PG       1        1      100.0  % $     52.88
+      PGR      2        2      100.0  % $    119.08
+      PH       1        1      100.0  % $     53.73
+      PKG      1        1      100.0  % $     85.11
+      PM       1        1      100.0  % $     54.38
+      PNC      1        1      100.0  % $     66.64
+      PNR      1        1      100.0  % $     52.26
+      PODD     1        1      100.0  % $     85.33
+      PRU      1        1      100.0  % $     90.80
+      QCOM     1        1      100.0  % $    100.91
+      REGN     1        1      100.0  % $     75.41
+      RJF      1        1      100.0  % $     51.75
+      RL       1        1      100.0  % $    110.32
+      ROP      2        2      100.0  % $     98.40
+      RTX      1        1      100.0  % $     86.87
+      RVTY     1        1      100.0  % $     90.63
+      SATS     1        1      100.0  % $     46.89
+      SBUX     1        1      100.0  % $     30.95
+      SCHW     1        1      100.0  % $     56.48
+      SJM      1        1      100.0  % $     44.17
+      SMCI     1        1      100.0  % $     74.27
+      SRE      1        1      100.0  % $     51.41
+      STT      1        1      100.0  % $     37.81
+      STZ      1        1      100.0  % $     53.91
+      SW       2        2      100.0  % $     38.62
+      SWK      2        2      100.0  % $    187.81
+      SWKS     1        1      100.0  % $     38.86
+      SYF      2        2      100.0  % $     89.65
+      TAP      2        2      100.0  % $     24.06
+      TDG      1        1      100.0  % $     87.81
+      TECH     1        1      100.0  % $     29.78
+      TER      1        1      100.0  % $     88.69
+      TGT      1        1      100.0  % $     29.24
+      TKO      1        1      100.0  % $     80.80
+      TPR      2        2      100.0  % $    135.47
+      TROW     1        1      100.0  % $     29.48
+      TRV      1        1      100.0  % $     47.63
+      TSCO     2        2      100.0  % $     80.61
+      TSLA     3        3      100.0  % $    299.05
+      TT       1        1      100.0  % $    111.40
+      TXT      1        1      100.0  % $     22.05
+      UHS      3        3      100.0  % $    220.52
+      UNH      1        1      100.0  % $    110.97
+      UNP      1        1      100.0  % $     60.27
+      UPS      1        1      100.0  % $     41.85
+      USB      3        3      100.0  % $     45.87
+      VLO      2        2      100.0  % $    130.64
+    2026
+      Ticker   Trades   Wins   Win%     P&L
+      ABBV     1        1      100.0  % $    144.51
+      ABNB     1        1      100.0  % $    121.96
+      AJG      1        1      100.0  % $     94.94
+      ALGN     2        2      100.0  % $    148.00
+      AMCR     1        1      100.0  % $     21.24
+      APA      1        1      100.0  % $     55.00
+      APH      1        1      100.0  % $     50.54
+      APO      1        0      0.0    % $   -589.00
+      APTV     2        2      100.0  % $    154.62
+      ARES     1        1      100.0  % $     94.09
+      AXP      1        1      100.0  % $     75.99
+      AZO      1        1      100.0  % $     66.48
+      BALL     1        1      100.0  % $     33.29
+      BDX      1        1      100.0  % $     37.46
+      BKNG     1        1      100.0  % $     83.06
+      BR       2        2      100.0  % $    163.49
+      BSX      1        1      100.0  % $     98.49
+      C        1        1      100.0  % $     59.59
+      CBRE     1        1      100.0  % $    125.20
+      CEG      1        1      100.0  % $    131.51
+      CF       1        1      100.0  % $     77.80
+      CIEN     1        1      100.0  % $    137.22
+      CMG      2        2      100.0  % $      7.53
+      CMI      1        1      100.0  % $    101.60
+      COR      1        1      100.0  % $     74.71
+      COST     1        1      100.0  % $     66.95
+      CPAY     2        2      100.0  % $    148.86
+      CRL      1        1      100.0  % $     95.60
+      CRM      1        1      100.0  % $    137.13
+      CSCO     1        1      100.0  % $     70.53
+      CTSH     1        1      100.0  % $     59.46
+      CVS      1        1      100.0  % $     64.06
+      DASH     2        2      100.0  % $    108.40
+      DLTR     1        1      100.0  % $     46.33
+      DOV      1        1      100.0  % $     85.72
+      DOW      1        1      100.0  % $     57.84
+      DRI      1        1      100.0  % $     63.72
+      DXCM     1        1      100.0  % $     67.85
+      EBAY     1        1      100.0  % $     65.59
+      EFX      2        2      100.0  % $    115.53
+      EL       1        1      100.0  % $     89.40
+      ELV      1        1      100.0  % $     77.84
+      EME      1        1      100.0  % $     96.99
+      EW       1        1      100.0  % $     45.06
+      EXPD     1        1      100.0  % $     65.02
+      FCX      1        1      100.0  % $     35.05
+      FDX      1        1      100.0  % $    126.49
+      FISV     1        1      100.0  % $     15.48
+      FTV      1        1      100.0  % $     42.35
+      GD       1        1      100.0  % $     55.04
+      GEHC     1        1      100.0  % $     42.38
+      GILD     1        1      100.0  % $     63.46
+      GLW      1        1      100.0  % $    129.90
+      GRMN     1        0      0.0    % $   -379.30
+      HD       1        1      100.0  % $     54.01
+      HII      1        1      100.0  % $    100.64
+      HLT      1        1      100.0  % $    108.27
+      HOOD     2        2      100.0  % $    183.76
+      ICE      1        1      100.0  % $     66.89
+      IP       2        2      100.0  % $     60.10
+      IQV      1        1      100.0  % $     70.03
+      IT       1        1      100.0  % $    105.17
+      IVZ      1        1      100.0  % $     28.52
+      JKHY     1        1      100.0  % $    119.94
+      KEYS     1        1      100.0  % $     51.17
+      KKR      1        1      100.0  % $     92.86
+      KMB      2        2      100.0  % $     82.84
+      LDOS     1        1      100.0  % $     75.75
+      LEN      1        1      100.0  % $     66.64
+      LII      1        1      100.0  % $    138.78
+      LULU     1        1      100.0  % $     57.63
+      LUV      1        1      100.0  % $     56.20
+      MA       1        1      100.0  % $    111.74
+      MCO      1        1      100.0  % $     86.65
+      MDT      1        1      100.0  % $     34.83
+      META     1        1      100.0  % $     89.23
+      MLM      1        1      100.0  % $    114.77
+      MMM      1        1      100.0  % $     57.97
+      MOS      1        1      100.0  % $     14.53
+      MRK      1        1      100.0  % $     63.59
+      NOW      1        1      100.0  % $     87.38
+      NTAP     1        1      100.0  % $     80.76
+      NVR      1        1      100.0  % $    109.31
+      ODFL     1        1      100.0  % $     40.36
+      OTIS     1        1      100.0  % $     20.58
+      OXY      1        1      100.0  % $     25.76
+      PAYX     1        1      100.0  % $     19.09
+      PGR      1        1      100.0  % $     44.26
+      PHM      1        1      100.0  % $     63.80
+      PKG      1        1      100.0  % $     40.69
+      PLTR     2        1      50.0   % $   -336.53
+      PNR      1        1      100.0  % $     54.47
+      PODD     1        1      100.0  % $     58.68
+      PPG      1        1      100.0  % $     96.68
+      PYPL     1        1      100.0  % $     51.84
+      RCL      1        1      100.0  % $    148.94
+      REGN     1        1      100.0  % $     55.66
+      RJF      1        1      100.0  % $     27.70
+      ROK      1        1      100.0  % $    100.15
+      SNPS     1        1      100.0  % $    130.26
+      SOLV     1        1      100.0  % $     27.15
+      SPGI     1        1      100.0  % $     68.37
+      STE      1        1      100.0  % $     49.22
+      SW       1        1      100.0  % $     23.91
+      SYK      1        1      100.0  % $     32.67
+      SYY      1        1      100.0  % $     41.58
+      T        1        1      100.0  % $      5.81
+      TECH     2        2      100.0  % $    101.92
+      TEL      1        1      100.0  % $     74.26
+      TPR      1        1      100.0  % $     74.38
+      TRV      1        1      100.0  % $     48.69
+      TSCO     1        1      100.0  % $     40.01
+      TTD      1        1      100.0  % $     14.53
+      UAL      2        2      100.0  % $    156.75
+      UHS      1        1      100.0  % $     63.60
+      UNH      1        1      100.0  % $     94.43
+      UPS      1        1      100.0  % $     58.85
+
+  Trades exported to: C:\Neeraj\backup\tech\systematicinv\iron-condor\outputs\Stock_Put_Spread_Backtest.csv
+2026-06-07 18:13:09.051697
+2026-06-07 18:13:09.051697  ================================================================================
+2026-06-07 18:13:09.051697  FINAL SUMMARY - 10 YEAR SPX BACKTEST  (PUT SPREAD ON STOCKS)
+2026-06-07 18:13:09.051697  ================================================================================
+2026-06-07 18:13:09.051697
+2026-06-07 18:13:09.051697    +------------------------------------------------------------+
+2026-06-07 18:13:09.052705    |      CAPITAL INVESTED:                  $24,048            |
+2026-06-07 18:13:09.052705  total trades:          889          |
+2026-06-07 18:13:09.052705  win rate:            9718.79%       |
+2026-06-07 18:13:09.052705    |    TOTAL P&L (10 years):                $38,707            |
+2026-06-07 18:13:09.052705    |        TOTAL RETURN:                      161%             |
+2026-06-07 18:13:09.052705    |         ANNUAL P&L:                      $9,683            |
+2026-06-07 18:13:09.052705    |         ANNUAL ROC:                      40.3%             |
+2026-06-07 18:13:09.052705    |          WIN RATE:                       97.2%             |
+2026-06-07 18:13:09.052705    |        PROFIT FACTOR:                     4.68             |
+2026-06-07 18:13:09.052705    |   TOTAL ROLLS (PUT/CALL):                 0/0              |
+2026-06-07 18:13:09.052705    +------------------------------------------------------------+
+2026-06-07 18:13:09.052705
+
+Process finished with exit code 0

@@ -246,6 +246,11 @@ def run_main(*, strategy, title, script_name, csv_filename, start_date, delta_da
     log("=" * 80)
     log()
 
+    end_date = start_date + timedelta(days=delta_days + 1)  # +1 to include the last day in the loop
+    today = datetime.today()
+    if end_date > today:
+        end_date = today
+        delta_days = (end_date - start_date).days
     years   = delta_days / 365.25
     results = run_backtest(start_date, delta_days, strategy, title)
 
