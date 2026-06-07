@@ -11,7 +11,7 @@ not in the logic below.
 """
 
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import date
 from typing import Optional
 
 import pandas as pd
@@ -25,8 +25,7 @@ import pandas_ta_classic as ta
 @dataclass
 class ScannerConfig:
     # Earnings gate
-    earnings_lookahead_days: int = 1    # entry on day N after earnings
-                                        # 1 = day immediately after
+    earnings_lookahead_days: int = 1    # entry on day N after earnings, 1 = day immediately after
 
     # EMA trend
     ema_period: int   = 20              # EMA(20)
@@ -149,11 +148,11 @@ def scan(current_date: date, price_df: pd.DataFrame, earnings_dates: list[date],
 
     # ── gate 1: yesterday was an earnings day ────────────────────────────
     yesterday = current_date - timedelta(days=cfg.earnings_lookahead_days)
-    if yesterday not in earnings_dates:
+    if yesterday.date() not in earnings_dates:
         return False, None
 
     # ── slice history up to and including current_date ───────────────────
-    history = price_df[price_df.index.date <= current_date]
+    history = price_df[price_df.index <= current_date]
     if history.empty:
         return False, None
 
@@ -183,3 +182,57 @@ def scan(current_date: date, price_df: pd.DataFrame, earnings_dates: list[date],
         return False, None
 
     return True, strike
+
+
+if __name__ == "__main__":
+    from CacheDailyOHLCV import CachedailyOHLCV, get_spy_ticker_list
+    from CacheEarning import EarningsCache
+    from config import YF_DATA_PATH
+    from datetime import timedelta, date, datetime
+    from config_stocks import *
+
+    start_date = datetime(2025, 5, 1)
+    delta_days = 365 * 4
+    end_date = start_date + timedelta(days=delta_days + 1)  # +1 to include the last day in the loop
+
+    sp500_list = get_spy_ticker_list()
+    # sp500_list = ['MMM']  # TODO: expand as needed
+    cache = CachedailyOHLCV(path=YF_DATA_PATH, start_date=start_date, delta_days=delta_days)
+    sorted_dates = {}  # {ticker: [sorted list of dates in price_data]}
+    for ticker in sp500_list:
+        df = cache.get_cache(ticker)
+        sorted_dates[ticker] = sorted(pd.to_datetime(df.index).normalize().tolist())
+
+    sorted_dates = next(iter(sorted_dates.values()))
+    dates = [pd.Timestamp(d) for d in sorted_dates]
+    dates = [d for d in dates if start_date <= d <= end_date]
+    dates = [datetime(2026, 4, 22)]   # hardcode for testing
+
+    print("  Loading earnings data...")
+    earnings_cache = EarningsCache(path=YF_DATA_PATH)
+    # earnings_cache.download_list(sp500_list)  # TODO: update manually for now
+    earnings_data = {t: earnings_cache.get_earnings_dates(t) for t in sp500_list}
+    print(f"  ✓ Loaded earnings for {len(earnings_data)} tickers")
+
+    stock_cfg = ScannerConfig(
+        earnings_lookahead_days=SCAN_EARNINGS_LOOKAHEAD_DAYS,
+        ema_period=SCAN_EMA_PERIOD,
+        ema_trend_days=SCAN_EMA_TREND_DAYS,
+        rsi_period=SCAN_RSI_PERIOD,
+        rsi_slope_days=SCAN_RSI_SLOPE_DAYS,
+        rsi_slope_min=SCAN_RSI_SLOPE_MIN,
+        support_lookback=SCAN_SUPPORT_LOOKBACK,
+        min_price_above_support_pct=SCAN_MIN_PRICE_ABOVE_SUPPORT_PCT,
+        strike_increment=SCAN_STRIKE_INCREMENT,
+    )
+    ii = 0
+    for cur_date in dates:
+        for ticker in sp500_list:
+            df = cache.get_cache(ticker)
+            earnings_dt = earnings_cache.get_earnings_dates(ticker) # TODO: fix scanner
+            entered, stk_strike = scan(cur_date, df, earnings_dt, stock_cfg)
+            if entered:
+                print(f"{cur_date.date()} {ticker} ENTER at strike {stk_strike}")
+                ii += 1
+                if ii > 10:
+                    break

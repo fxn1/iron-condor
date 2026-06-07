@@ -25,7 +25,7 @@ class EarningsCache:
         return os.path.join(self.path, ticker + '_earnings.csv')
 
     def _get_cache(self, ticker):
-        filepath = self._get_filepath(ticker)
+        filepath = self._get_filepath(ticker.replace(".", "-"))
         try:
             df = pd.read_csv(filepath, parse_dates=True, index_col='Date')
             df.index = df.index.tz_localize(None)   # strip tz, matches cachebt
@@ -73,17 +73,18 @@ class EarningsCache:
 
     def download_list(self, tickers):
         """Returns {ticker: df} where df has DatetimeIndex of earnings dates."""
-        result = {}
+        df_list = {}
         for ticker in tickers:
-            t = ticker.replace(".", "-")
-            df = self.update_ticker(t)
-            result[t] = df
-            print(f"{datetime.today()} {t}: {len(df)} earnings dates cached")
-        return result
+            if ticker.find(".") > 0:
+                ticker = ticker.replace(".", "-")
+            df = self.update_ticker(ticker)
+            df_list[ticker] = df
+        print(f"{datetime.today()} : {len(df_list)} earnings cached")
+        return df_list
 
     def get_ticker(self, ticker):
         """Return cached earnings df for one ticker."""
-        return self._get_cache(ticker.replace(".", "-"))
+        return self._get_cache(ticker)
 
     def get_earnings_dates(self, ticker):
         """

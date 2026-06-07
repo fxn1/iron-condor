@@ -80,6 +80,7 @@ class StockPutSpreadStrategy(BaseStrategy):
 
         print("  Loading earnings data...")
         earnings_cache = EarningsCache(path=YF_DATA_PATH)
+        # earnings_cache.download_list(sp500_list)  # TODO: manual run for now
         self.earnings_data = {t: earnings_cache.get_earnings_dates(t) for t in sp500_list}
         print(f"  ✓ Loaded earnings for {len(self.earnings_data)} tickers")
 

@@ -27,7 +27,7 @@ class CachedailyOHLCV:
         return os.path.join(self.path, ticker + '.csv')
 
     def get_cache(self, ticker):
-        filename = self.get_tickerfile(ticker)
+        filename = self.get_tickerfile(ticker.replace(".", "-"))
         try:
             return pd.read_csv(filename, parse_dates=True, index_col='Date')
         except FileNotFoundError:
@@ -47,12 +47,13 @@ class CachedailyOHLCV:
         res = len(pd.bdate_range(wkdate, wkdate))
         return res != 0
 
-    def last_week_day(self):
+    @staticmethod
+    def last_week_day():
         today = date.today()
-        if self.check_weekday(today):
+        if CachedailyOHLCV.check_weekday(today):
             return datetime.combine(today, datetime.min.time())
         today = today - timedelta(days=1)
-        if self.check_weekday(today):
+        if CachedailyOHLCV.check_weekday(today):
             return datetime.combine(today, datetime.min.time())
         today = today - timedelta(days=1)
         return datetime.combine(today, datetime.min.time())
@@ -99,15 +100,13 @@ class CachedailyOHLCV:
 
     def download_list(self, tickers):
         df_list = {}
-        ii = 0
         for ticker in tickers:
             if ticker.find(".") > 0:
                 ticker = ticker.replace(".", "-")
             df = self.update_ticker(ticker)
             df = df.loc[~df.index.duplicated(keep='first')]
             df_list[ticker] = df
-            ii += 1
-        print("{} {} {} end download".format(datetime.today(), ii, len(df_list)))
+        print("{} {} end download".format(datetime.today(), len(df_list)))
         return df_list
 
     def get_ticker(self, ticker):
