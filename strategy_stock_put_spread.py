@@ -115,7 +115,7 @@ class StockPutSpreadStrategy(BaseStrategy):
 
     def should_reenter_after_exit(self, trade) -> TradeSignal:
         """No re-entry for stock put spreads — one trade per earnings cycle."""
-        return TradeSignal(reason=TradeEntryReason.SKIPPED_VIX)
+        return TradeSignal(reason=TradeEntryReason.NO_SIGNAL)
 
     def mark_expiration_used(self, trade):
         self.used_expirations.add((trade.ticker, trade.expiration_date))
@@ -180,6 +180,7 @@ class StockPutSpreadStrategy(BaseStrategy):
         log(f"  Capital:      ")
 
     def print_extra_results(self, results, years):
+        # TODO: pass strategy to reporting and call this
         from reporting import print_stock_results
         print_stock_results(results, years)
 
@@ -224,7 +225,7 @@ if __name__ == "__main__":
         start_date    = BACKTEST_START_DATE,
         delta_days    = fix_delta_days,
         extra_summary_lines = lambda r: [
-            f"total trades: {r['total_trades']:^22}|",
-            f"win rate:     {r['win_rate']:^22.2%}|",
+            f"  |{'total trades':^30} {r['total_trades']:^22}|",
+            f"  |{'win rate':^30}     {r['win_rate']:^22.2%}|",
         ],
     )

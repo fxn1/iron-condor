@@ -176,9 +176,7 @@ class OneSidedSpreadTrade(Trade):
             expiration_pnl = self.expiration_pnl(spx_price)
             self._close_trade(expiration_pnl, "Expiration", current_date, spx_price)
             self.spx_price_at_expiration = spx_price
-
             return True
-
         return False
 
     def _close_at_expiration(self, spx_price):

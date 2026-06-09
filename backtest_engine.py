@@ -254,16 +254,16 @@ def run_main(*, strategy, title, script_name, csv_filename, start_date, delta_da
     years   = delta_days / 365.25
     results = run_backtest(start_date, delta_days, strategy, title)
 
-    print_results(results, years)
+    print_results(results, title, years)
     strategy.print_extra_results(results, years)  # ← stock sections; no-op for SPX
 
     csv_path = os.path.join(OUTPUT_PATH, csv_filename)
     export_trades_to_csv(results, csv_path)
     log()
-
+    # TODO: move below to reporting, and make it more generic (not SPX-specific) by passing in the wing width or other relevant parameters via results or strategy.
     if not results['closed_trades']:
         log("=" * 80)
-        log(f"FINAL SUMMARY - 10 YEAR SPX BACKTEST  ({title})")
+        log(f"FINAL SUMMARY -  ({title})")
         log("=" * 80)
         log()
         log("  No trades were generated for this run.")
@@ -277,17 +277,18 @@ def run_main(*, strategy, title, script_name, csv_filename, start_date, delta_da
     # using 4 understates capital ~20% and overstates ROC ~25%.)
     margin = (WING_WIDTH - avg_credit) * 100 * CONCURRENT_TRADES
     annual_pnl = results['total_pnl_dollars'] / years
-    roc        = annual_pnl / margin * 100 if margin else 0
+    total_return = results['total_pnl_dollars'] / margin
+    roc = ((1 + total_return) ** (1 / years) - 1) * 100 if margin and years > 0 else 0
 
     log("=" * 80)
-    log(f"FINAL SUMMARY - 10 YEAR SPX BACKTEST  ({title})")
+    log(f"FINAL SUMMARY - BACKTEST  ({title})")
     log("=" * 80)
     log()
     log(f"  +{'-'*60}+")
     log(f"  |{'CAPITAL INVESTED:':^30}{'${:,.0f}'.format(margin):^30}|")
     for line in (extra_summary_lines(results) if extra_summary_lines else []):
         log(line)
-    log(f"  |{'TOTAL P&L (10 years):':^30}{'${:,.0f}'.format(results['total_pnl_dollars']):^30}|")
+    log(f"  |{'TOTAL P&L :':^30}{'${:,.0f}'.format(results['total_pnl_dollars']):^30}|")
     if margin:
         log(f"  |{'TOTAL RETURN:':^30}{'{:.0f}%'.format(results['total_pnl_dollars']/margin*100):^30}|")
     log(f"  |{'ANNUAL P&L:':^30}{'${:,.0f}'.format(annual_pnl):^30}|")

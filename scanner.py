@@ -59,56 +59,46 @@ def trend_period(ema, window_len) -> float:
     return window.cov(x) / x.var()  # slope of EMA over the window
 
 
-def _ema_trending_up(close: pd.Series, cfg: ScannerConfig) -> float:
+def _ema_trending_up(close: pd.Series, cfg: ScannerConfig) -> bool:
     """
     EMA is in an upward trend, allowing noise/dips inside the lookback.
     handles he case of price goes up after ema_trend_days and is now trending down but ema is still below ema_trend_days ago
     """
     ema = ta.ema(close, length=cfg.ema_period)
     if ema is None:
-        return 0.0
+        return False
 
     ema = ema.dropna()
     window_len = cfg.ema_trend_days + 1
     if len(ema) < window_len:
-        return 0.0
+        return False
 
-    # 1. overall slope over lookback period must be positive
-    slope = ema.iloc[-1] > ema.iloc[-1 - cfg.ema_trend_days]
-
-    # 2. EMA must be trending up over the lookback period, allowing for noise/dips
-    overall_slope = trend_period(ema, window_len)
-
-    # 3. recent slope over half the lookback period must also be positive to avoid old uptrend that's now reversing
-    recent_slope = trend_period(ema, max(3, window_len // 2))
+    slope = ema.iloc[-1] > ema.iloc[-window_len]  # 1. overall slope over lookback period must be positive
+    overall_slope = trend_period(ema, window_len)  # 2. EMA must be trending up over the lookback period, allowing for noise/dips
+    recent_slope = trend_period(ema, max(3, window_len // 2))  # 3. recent slope over half the lookback period must also be positive to avoid old uptrend that's now reversing
     return slope and overall_slope > 0 and recent_slope > 0
 
 
 # similar trend check as _ema_trending_up.?
-def _rsi_slope(close: pd.Series, cfg: ScannerConfig) -> float:
+def _rsi_slope(close: pd.Series, cfg: ScannerConfig) -> bool:
     """Slope of RSI(period) over last rsi_slope_days days."""
     rsi = ta.rsi(close, length=cfg.rsi_period)
     if rsi is None:
-        return 0.0
+        return False
     rsi = rsi.dropna()
     window_len = cfg.rsi_slope_days + 1
     if len(rsi) < window_len:
-        return 0.0
+        return False
 
     if len(rsi) <= cfg.rsi_period:
-        return 0.0
+        return False
 
     if rsi.iloc[-1] < cfg.rsi_slope_min:
-        return 0.0
+        return False
 
-    # 1. overall slope over lookback period must be positive
-    slope = rsi.iloc[-1] > rsi.iloc[-1 - cfg.rsi_period]
-
-    # 2. rsi must be trending up over the lookback period, allowing for noise/dips
-    overall_slope = trend_period(rsi, window_len)
-
-    # 3. recent slope over half the lookback period must also be positive to avoid old uptrend that's now reversing
-    recent_slope = trend_period(rsi, max(3, window_len // 2))
+    slope = rsi.iloc[-1] > rsi.iloc[-1 - cfg.rsi_period]  # 1. overall slope over lookback period must be positive
+    overall_slope = trend_period(rsi, window_len)  # 2. rsi must be trending up over the lookback period, allowing for noise/dips
+    recent_slope = trend_period(rsi, max(3, window_len // 2))  # 3. recent slope over half the lookback period must also be positive to avoid old uptrend that's now reversing
     return slope and overall_slope > 0 and recent_slope > 0
 
 
@@ -150,9 +140,10 @@ def scan(current_date: date, price_df: pd.DataFrame, earnings_dates: list[date],
     """
 
     # ── gate 1: yesterday was an earnings day ────────────────────────────
-    yesterday = current_date - timedelta(days=cfg.earnings_lookahead_days)
-    if yesterday.date() not in earnings_dates:
-        return False, None
+    if cfg.earnings_lookahead_days > 0:
+        yesterday = current_date - timedelta(days=cfg.earnings_lookahead_days)
+        if yesterday.date() not in earnings_dates:
+            return False, None
 
     # ── slice history up to and including current_date ───────────────────
     history = price_df[price_df.index <= current_date]
@@ -163,11 +154,11 @@ def scan(current_date: date, price_df: pd.DataFrame, earnings_dates: list[date],
     current_price = float(close.iloc[-1])
 
     # ── gate 2: EMA(20) trending up ──────────────────────────────────────
-    if _ema_trending_up(close, cfg) > 0.0:
+    if not _ema_trending_up(close, cfg):
         return False, None
 
     # ── gate 3: RSI(14) slope > threshold ────────────────────────────────
-    if _rsi_slope(close, cfg) > 0.0:
+    if not _rsi_slope(close, cfg):
         return False, None
 
     # ── gate 4: support exists and price is sufficiently above it ────────
@@ -207,8 +198,8 @@ if __name__ == "__main__":
         sorted_dates[ticker] = sorted(pd.to_datetime(df.index).normalize().tolist())
 
     sorted_dates = next(iter(sorted_dates.values()))
-    dates = [pd.Timestamp(d) for d in sorted_dates]
-    dates = [d for d in dates if start_date <= d <= end_date]
+    # dates = [pd.Timestamp(d) for d in sorted_dates]
+    # dates = [d for d in dates if start_date <= d <= end_date]
     dates = [datetime(2026, 4, 22)]   # hardcode for testing
 
     print("  Loading earnings data...")
@@ -232,7 +223,7 @@ if __name__ == "__main__":
     for cur_date in dates:
         for ticker in sp500_list:
             df = cache.get_cache(ticker)
-            earnings_dt = earnings_cache.get_earnings_dates(ticker) # TODO: fix scanner
+            earnings_dt = earnings_cache.get_earnings_dates(ticker)  # TODO: fix scanner
             entered, stk_strike = scan(cur_date, df, earnings_dt, stock_cfg)
             if entered:
                 print(f"{cur_date.date()} {ticker} ENTER at strike {stk_strike}")
