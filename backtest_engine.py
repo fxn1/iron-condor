@@ -223,7 +223,7 @@ def run_backtest(start_date, delta_days, strategy, run_title):
 # SHARED MAIN HELPER
 # ============================================================================
 
-def run_main(*, strategy, title, script_name, csv_filename, start_date, delta_days, extra_summary_lines=None):
+def run_main(*, strategy, title, script_name, csv_filename, start_date, end_date, extra_summary_lines=None):
     """
     Shared main() body.  Callers supply only what differs between variants.
 
@@ -234,7 +234,7 @@ def run_main(*, strategy, title, script_name, csv_filename, start_date, delta_da
     script_name         : str  — printed under the banner
     csv_filename        : str  — output CSV filename (no path)
     start_date         : datetime or None — if provided, overrides default backtest start date
-    delta_days         : int - backtest end date is start date + delta_days
+    end_date   : datetime — backtest end date (will be capped to today if in future)
     extra_summary_lines : callable(results) -> list[str] | None — extra lines
                           inserted after the CAPITAL INVESTED row in the final
                           summary box.  Receives results so lines can reference
@@ -246,16 +246,16 @@ def run_main(*, strategy, title, script_name, csv_filename, start_date, delta_da
     log("=" * 80)
     log()
 
-    end_date = start_date + timedelta(days=delta_days + 1)  # +1 to include the last day in the loop
     today = datetime.today()
     if end_date > today:
         end_date = today
-        delta_days = (end_date - start_date).days
+    end_date = end_date + timedelta(days=1)  # +1 to include the last day in the loop
+    delta_days = (end_date - start_date).days
     years   = delta_days / 365.25
     results = run_backtest(start_date, delta_days, strategy, title)
 
-    print_results(results, title, years)
     strategy.print_extra_results(results, years)  # ← stock sections; no-op for SPX
+    print_results(results, title, years)
 
     csv_path = os.path.join(OUTPUT_PATH, csv_filename)
     export_trades_to_csv(results, csv_path)

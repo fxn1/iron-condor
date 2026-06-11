@@ -28,9 +28,13 @@ from trade import IronCondorTrade
 from config import *
 
 
+def log(msg=""):
+    print(f"{datetime.now()}  {msg}")
+
 # ============================================================================
 # STRATEGY
 # ============================================================================
+
 
 class Fixed4Strategy(BaseStrategy):
     """
@@ -57,20 +61,20 @@ class Fixed4Strategy(BaseStrategy):
         if os.path.exists(VIX_DATA_PATH):
             self.vix_data = load_vix_data_from_excel(VIX_DATA_PATH)
             if self.vix_data:
-                print(f"  Loaded {len(self.vix_data)} days of VIX data")
+                log(f"  Loaded {len(self.vix_data)} days of VIX data")
         if self.vix_data is None:
-            print(f"  ERROR: VIX data not found {VIX_DATA_PATH}")
+            log(f"  ERROR: VIX data not found {VIX_DATA_PATH}")
             return
-        print()
+        log()
 
-        print("  Loading SPX minute data...")
+        log("  Loading SPX minute data...")
         end_date = start_date + timedelta(days=delta_days)
         self.spx_data = load_spx_daily_from_minute_files(start_date.year, end_date.year)
         if self.spx_data is None:
-            print("  ERROR: could not load SPX data")
+            log("  ERROR: could not load SPX data")
             return
         self.sorted_dates = sorted(self.spx_data.keys())
-        print(f"  Built {len(self.spx_data)} daily SPX bars")
+        log(f"  Built {len(self.spx_data)} daily SPX bars")
 
     def should_enter_trades(self, current_date) -> list[TradeSignal]:
         return [self.should_enter_trade(current_date)]
@@ -142,13 +146,28 @@ class Fixed4Strategy(BaseStrategy):
         return [d for d in dates if start_date <= d <= end_date]
 
     def print_strategy_config(self):
-        print(f"  Underlying:    SPX (real 1-min data, resampled to daily)")
-        print(f"  Strategy:      18/14 delta IC, ${WING_WIDTH} wings, Monday entry, {TARGET_DTE} DTE")
-        print(f"  Roll rule:     |net delta| > {NET_DELTA_ROLL}  (warn at +/-{NET_DELTA_WARN})")
-        print(f"  Capital:       fixed assumption of {CONCURRENT_TRADES} concurrent trades")
+        log("  STRATEGY")
+        log("  " + "-" * 60)
+        log(f"  Underlying:    SPX (real 1-min data, resampled to daily)")
+        log(f"  Strategy:      18/14 delta IC, ${WING_WIDTH} wings, Monday entry, {TARGET_DTE} DTE")
+        log(f"  Roll rule:     |net delta| > {NET_DELTA_ROLL}  (warn at +/-{NET_DELTA_WARN})")
+        log(f"  Capital:       fixed assumption of {CONCURRENT_TRADES} concurrent trades")
+        log(f"    PUT/CALL Delta:    {PUT_DELTA} / {CALL_DELTA}")
+        log(f"    Profit Target:     {int(PROFIT_TARGET*100)}%")
+        log(f"    Stop Loss:         {STOP_LOSS_MULTIPLIER}x credit per leg (worst-intraday)")
+        log(f"    10 DTE Exit:       Smart exit, gap-aware")
+        log(f"    VIX No-Trade:      > {VIX_NO_TRADE}")
+        log()
 
     def print_extra_results(self, results, years):
-        pass
+        log("  NET-DELTA MANAGEMENT")
+        log("  " + "-" * 60)
+        log(f"    Days in Warn band ({NET_DELTA_WARN}-{NET_DELTA_ROLL}):     {results['days_in_warn']}")
+        log(f"    Days in Roll zone (>{NET_DELTA_ROLL}):       {results['days_in_roll_zone']}")
+        log(f"    Trades that rolled at least 1x:    {results['rolled_trades']}")
+        log(f"    Total PUT-side rolls:              {results['total_put_rolls']}")
+        log(f"    Total CALL-side rolls:             {results['total_call_rolls']}")
+        log()
 
     def check_expiration_used(self, current_date) -> bool:
         return self._exp_key(current_date) in self.used_expirations
@@ -196,15 +215,13 @@ class Fixed4Strategy(BaseStrategy):
 
 
 if __name__ == "__main__":
-    strategy = Fixed4Strategy()
-
     run_main(
-        strategy      = strategy,
+        strategy      = Fixed4Strategy(),
         title         = "SPX BACKTEST NET-DELTA + FIXED *5 CAPITAL",
         script_name   = "Options_Using_SPX_10_NetDelta_Fixed4.PY",
         csv_filename  = "SPX_IronCondor_10Year_NetDelta_Fixed4_Backtest.csv",
         start_date   = datetime(2016, 5, 9),
-        delta_days   = 365*10,
+        end_date     = datetime(2026, 5, 8),
         extra_summary_lines = lambda r: [
             f"  |{'(fixed {} concurrent)'.format(CONCURRENT_TRADES):^30}"
             f"{'peak obs: {}'.format(r['max_concurrent']):^30}|",

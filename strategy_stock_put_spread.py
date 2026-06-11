@@ -212,20 +212,15 @@ def _get_expiration(entry_date):
 
 
 if __name__ == "__main__":
-    BACKTEST_START_DATE = datetime(2022, 6, 1)
-    fix_delta_days = 365*4
-
-    strategy = StockPutSpreadStrategy()
-
     run_main(
-        strategy      = strategy,
+        strategy      = StockPutSpreadStrategy(),
         title         = "PUT SPREAD ON STOCKS",
         script_name   = "Scanner_Put_Spread.py",  # for consistent naming in reports
         csv_filename  = "Stock_Put_Spread_Backtest.csv",
-        start_date    = BACKTEST_START_DATE,
-        delta_days    = fix_delta_days,
+        start_date    = datetime(2022, 6, 1),
+        end_date      = datetime(2026, 5, 9),
         extra_summary_lines = lambda r: [
-            f"  |{'total trades':^30} {r['total_trades']:^22}|",
-            f"  |{'win rate':^30}     {r['win_rate']:^22.2%}|",
+            f"  |{'total trades':^30} {r['total_trades']:^30}|",
+            f"  |{'win rate':^30}     {r['win_rate']:^30.2%}|",
         ],
     )

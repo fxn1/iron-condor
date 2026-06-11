@@ -19,20 +19,6 @@ def print_results(results, title, years):
     log("=" * 80)
     log()
 
-    log("  STRATEGY")
-    log("  " + "-" * 60)
-    # TODO: move to fixed4
-    log(f"    Underlying:        SPX")
-    log(f"    PUT/CALL Delta:    {PUT_DELTA} / {CALL_DELTA}")
-    log(f"    Wing Width:        ${WING_WIDTH}")
-    log(f"    Roll Threshold:    |net delta| > {NET_DELTA_ROLL}")
-    log(f"    Profit Target:     {int(PROFIT_TARGET*100)}%")
-    log(f"    Stop Loss:         {STOP_LOSS_MULTIPLIER}x credit per leg (worst-intraday)")
-    log(f"    10 DTE Exit:       Smart exit, gap-aware")
-    log(f"    VIX No-Trade:      > {VIX_NO_TRADE}")
-    log(f"    Capital Sizing:    fixed {CONCURRENT_TRADES} concurrent")
-    log()
-
     log("  TRADE STATISTICS")
     log("  " + "-" * 60)
     log(f"    Total Trades:           {results['total_trades']}")
@@ -42,15 +28,6 @@ def print_results(results, title, years):
     log(f"    Winning Trades:         {results['winning_trades']}")
     log(f"    Losing Trades:          {results['losing_trades']}")
     log(f"    Win Rate:               {results['win_rate']:.1f}%")
-    log()
-
-    log("  NET-DELTA MANAGEMENT")
-    log("  " + "-" * 60)
-    log(f"    Days in Warn band ({NET_DELTA_WARN}-{NET_DELTA_ROLL}):     {results['days_in_warn']}")
-    log(f"    Days in Roll zone (>{NET_DELTA_ROLL}):       {results['days_in_roll_zone']}")
-    log(f"    Trades that rolled at least 1x:    {results['rolled_trades']}")
-    log(f"    Total PUT-side rolls:              {results['total_put_rolls']}")
-    log(f"    Total CALL-side rolls:             {results['total_call_rolls']}")
     log()
 
     log("  EXIT REASONS")
@@ -85,7 +62,7 @@ def print_results(results, title, years):
     # (Reviewer originally asked for * 4, but tracking showed peak = CONCURRENT_TRADES.)
     total_margin = margin_per * results['num_contracts'] * CONCURRENT_TRADES
     annual_pnl = results['total_pnl_dollars'] / years
-    total_return = results['total_pnl_dollars'] / total_margin
+    total_return = (total_margin + results['total_pnl_dollars']) / total_margin - 1
     roc = ((1 + total_return) ** (1 / years) - 1) * 100 if total_margin and years > 0 else 0
 
     log(f"    Avg Credit/Trade:       ${avg_credit:.2f} (incl. rolls)")
@@ -94,9 +71,9 @@ def print_results(results, title, years):
     log(f"    Peak Observed:          {results['max_concurrent']}  (informational)")
     log(f"    Total Capital Required: ${total_margin:,.2f}")
     log(f"    Annual P&L:             ${annual_pnl:,.2f}")
-    log(f"    Annual ROC:             {roc:.1f}%")
+    log(f"    Annual ROC:             {roc:.1f}% ((1+{total_return}**(1/{years})-1)")
     if total_margin:
-        log(f"    Total Return ({years:.0f} yrs):    {results['total_pnl_dollars']/total_margin*100:.1f}%")
+        log(f"    Total Return ({years:.0f} yrs):    {total_return*100:.1f}%")
     log()
 
     log("  YEARLY BREAKDOWN")
