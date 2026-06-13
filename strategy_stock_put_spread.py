@@ -16,10 +16,9 @@ from base_strategy import BaseStrategy, TradeSignal, TradeEntryReason
 from CacheDailyOHLCV import CachedailyOHLCV, get_spy_ticker_list
 from CacheEarning import EarningsCache
 from volatility import calculate_historical_volatility
-from scanner import ScannerConfig, scan
+from scanner import scan
 from put_spread import create_put_spread_from_scan
-from config import YF_DATA_PATH
-from config_stocks import *
+from config import gcfg
 
 
 def log(msg=""):
@@ -41,17 +40,7 @@ class StockPutSpreadStrategy(BaseStrategy):
         self.earnings_cache  = None
         self.used_expirations = set()
         self.sorted_dates     = {}    # {ticker: [sorted list of dates in price_data]}
-        self.cfg           = ScannerConfig(
-            earnings_lookahead_days        = SCAN_EARNINGS_LOOKAHEAD_DAYS,
-            ema_period                     = SCAN_EMA_PERIOD,
-            ema_trend_days                 = SCAN_EMA_TREND_DAYS,
-            rsi_period                     = SCAN_RSI_PERIOD,
-            rsi_slope_days                 = SCAN_RSI_SLOPE_DAYS,
-            rsi_slope_min                  = SCAN_RSI_SLOPE_MIN,
-            support_lookback               = SCAN_SUPPORT_LOOKBACK,
-            min_price_above_support_pct    = SCAN_MIN_PRICE_ABOVE_SUPPORT_PCT,
-            strike_increment               = SCAN_STRIKE_INCREMENT,
-        )
+        self.cfg               = gcfg.stocks
 
     # ── BaseStrategy: ───────────────────
 
@@ -68,7 +57,7 @@ class StockPutSpreadStrategy(BaseStrategy):
             df = self.price_data[ticker]
             window = dates[idx - 20: idx + 1]
             hist = [float(df.loc[d, 'Close']) for d in window]
-            return calculate_historical_volatility(hist) * STOCK_VOL_SCALAR
+            return calculate_historical_volatility(hist) * self.cfg.vol_scalar
         return 0.18
 
     # ── BaseStrategy interface ────────────────────────────────────────────
@@ -76,11 +65,11 @@ class StockPutSpreadStrategy(BaseStrategy):
     def load_data(self, start_date, delta_days):
         sp500_list = get_spy_ticker_list()
         log(" Loading stock price data...")
-        cache = CachedailyOHLCV(path=YF_DATA_PATH, start_date=start_date, delta_days=delta_days)
+        cache = CachedailyOHLCV(path=gcfg.paths.yf_data_path, start_date=start_date, delta_days=delta_days)
         self.price_data = cache.download_list(sp500_list)
         log(f"  ✓ Loaded {len(self.price_data)} tickers")
 
-        self.earnings_cache = EarningsCache(path=YF_DATA_PATH)
+        self.earnings_cache = EarningsCache(path=gcfg.paths.yf_data_path)
         # earnings_cache.download_list(sp500_list)  # TODO: manual run for now
 
         # precompute sorted date lists per ticker for vol lookback
@@ -103,7 +92,7 @@ class StockPutSpreadStrategy(BaseStrategy):
             if entered:
                 exp_key = (ticker, _get_expiration(current_date))
                 if exp_key not in self.used_expirations:
-                    if strike - STOCK_WING_WIDTH > 5.0:  # TODO: cfg min long strike
+                    if strike - self.cfg.wing_width > 5.0:  # TODO: self.cfg min long strike
                         signals.append(TradeSignal(reason=TradeEntryReason.SHOULD_ENTER, ticker=ticker, strike=strike))
                     else:
                         signals.append(TradeSignal(reason=TradeEntryReason.SKIPPED_LOW_STRIKE, ticker=ticker))
@@ -140,9 +129,9 @@ class StockPutSpreadStrategy(BaseStrategy):
             short_strike      = signal.strike,
             volatility        = volatility,
             trade_id          = trade_id,
-            wing_width        = STOCK_WING_WIDTH,
-            profit_target_pct = STOCK_PROFIT_TARGET,
-            num_contracts     = STOCK_NUM_CONTRACTS,
+            wing_width        = self.cfg.wing_width,
+            profit_target_pct = self.cfg.profit_target,
+            num_contracts     = self.cfg.num_contracts,
             ticker            = ticker,
         )
 
@@ -173,16 +162,16 @@ class StockPutSpreadStrategy(BaseStrategy):
         return [d for d in dates if start_date <= d <= end_date]
 
     def print_strategy_config(self):
-        log(f"  Strategy:    Stock Put Spread  (wing ${STOCK_WING_WIDTH}, {STOCK_TARGET_DTE} DTE)")
-        log(f"  Entry:       Day after earnings, EMA({SCAN_EMA_PERIOD}) up, RSI slope > {SCAN_RSI_SLOPE_MIN}")
-        log(f"  Support:     {SCAN_SUPPORT_LOOKBACK}-day rolling low, strike increment ${SCAN_STRIKE_INCREMENT}")
-        log(f"  Profit target: {int(STOCK_PROFIT_TARGET * 100)}%  Stop: {STOCK_STOP_LOSS_MULT}x credit")
+        log(f"  Strategy:    Stock Put Spread  (wing ${self.cfg.wing_width}, {self.cfg.target_dte} DTE)")
+        log(f"  Entry:       Day after earnings, EMA({self.cfg.ema_period}) up, RSI slope > {self.cfg.rsi_slope_min}")
+        log(f"  Support:     {self.cfg.support_lookback}-day rolling low, strike increment ${self.cfg.strike_increment}")
+        log(f"  Profit target: {int(self.cfg.profit_target * 100)}%  Stop: {self.cfg.stop_loss_mult}x credit")
         log(f"  Capital:      ")
 
     def print_extra_results(self, results, years):
         # TODO: pass strategy to reporting and call this
         from reporting import print_stock_results
-        print_stock_results(results, years)
+        print_stock_results(results)
 
     def fill_expiration_price(self, trade):
         pass
@@ -201,8 +190,8 @@ class StockPutSpreadStrategy(BaseStrategy):
 
 
 def _get_expiration(entry_date):
-    """Next standard expiration approximately STOCK_TARGET_DTE days out."""
-    target = entry_date + timedelta(days=STOCK_TARGET_DTE)
+    """Next standard expiration approximately cfg.target_dte days out."""
+    target = entry_date + timedelta(days=gcfg.stocks.target_dte)
     # Roll to next Friday
     days_to_friday = (4 - target.weekday()) % 7
     friday = target + timedelta(days=days_to_friday)
@@ -219,8 +208,4 @@ if __name__ == "__main__":
         csv_filename  = "Stock_Put_Spread_Backtest.csv",
         start_date    = datetime(2022, 6, 1),
         end_date      = datetime(2026, 5, 9),
-        extra_summary_lines = lambda r: [
-            f"  |{'total trades':^30} {r['total_trades']:^30}|",
-            f"  |{'win rate':^30}     {r['win_rate']:^30.2%}|",
-        ],
     )

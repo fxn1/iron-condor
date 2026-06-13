@@ -1,34 +1,65 @@
 import os
+import configparser
 
-# ============================================================================
-# PATH CONFIGURATION
-# ============================================================================
-SCRIPT_DIR    = os.path.dirname(os.path.abspath(__file__))
-YF_DATA_PATH  = os.environ.get('YFDATA', os.path.join(SCRIPT_DIR, 'yfdatas'))
-DATA_PATH     = os.environ.get('DATA', os.path.join(SCRIPT_DIR, 'datas'))
-OUTPUT_PATH     = os.environ.get('OUTPUT', os.path.join(SCRIPT_DIR, 'outputs'))
+class Section:
+    pass
 
-# ============================================================================
-# CONFIGURATION
-# ============================================================================
 
-WING_WIDTH          = 50    # Width of each option spread wing
-NUM_CONTRACTS       = 1     # Number of contracts per side (1 contract = 100 shares)
-TARGET_DTE          = 30    # Target days to expiration at entry
-PUT_DELTA           = 18    # Short put target delta (positive number, share-equivalent units)
-CALL_DELTA          = 14    # Short call target delta (positive number, share-equivalent units)
-VIX_NO_TRADE        = 25    # Skip new entries above this VIX level
-VIX_EXIT_PUT        = 30    # Exit put side if VIX exceeds this level (even if profit target not hit)
-PROFIT_TARGET       = 0.50  # Target profit as a fraction of max potential credit (e.g. 0.5 = 50% of max credit)
-STOP_LOSS_MULTIPLIER = 2    # Per leg Stop loss as a multiple of max potential credit (e.g. 2 = 200% of max credit)
-EXIT_DTE            = 10    # Smart exit any remaining positions at EXIT_DTE days to expiration (regardless of profit/loss)
-RISK_FREE_RATE      = 0.05  # Assumed risk-free rate for option pricing (5% annualized)
+class Config:
 
-# Net-delta roll thresholds (share-equivalent units, per 1 contract spread)
-NET_DELTA_WARN      = 10   # Monitor band for absolute net delta (positive number, share-equivalent units)
-NET_DELTA_ROLL      = 15   # Roll threshold for absolute net delta (|net delta| > 15 -> roll the threatened side)
-MAX_ROLLS_PER_SIDE  = 3  # safety cap per side to prevent runaway rolling
+    def __init__(self):
+        self.cp = configparser.ConfigParser(inline_comment_prefixes=("#", ";"))
 
-# Capital sizing: fixed assumption (NOT data-driven max_concurrent)
-CONCURRENT_TRADES   = 5   # Fixed capital sizing assumption - Observed peak from prior runs (was 4, bumped to match reality)
+    def _load_values(self):
+        for section in self.cp.sections():
+            if not hasattr(self, section):
+                setattr(self, section, Section())
 
+            section_obj = getattr(self, section)
+
+            for key, value in self.cp.items(section):
+                setattr(section_obj, key, self._convert(value))
+
+    def load(self, filename):
+        loaded = self.cp.read(filename)
+        if not loaded:
+            raise FileNotFoundError(filename)
+        self._load_values()
+
+    def resolve_paths(self):
+        if not hasattr(self, "paths"):
+            raise ValueError("[paths] section missing")
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        if not os.path.isabs(self.paths.yf_data_path):
+            self.paths.yf_data_path = os.path.join(script_dir, self.paths.yf_data_path)
+        if not os.path.isabs(self.paths.data_path):
+            self.paths.data_path = os.path.join(script_dir, self.paths.data_path)
+        if not os.path.isabs(self.paths.output_path):
+            self.paths.output_path = os.path.join(script_dir, self.paths.output_path)
+
+    @staticmethod
+    def _convert(value):
+
+        value = value.strip()
+        if value == "":
+            raise ValueError(...)
+
+        if value.lower() in ("true", "false"):
+            return value.lower() == "true"
+
+        try:
+            return int(value)
+        except ValueError:
+            pass
+
+        try:
+            return float(value)
+        except ValueError:
+            pass
+
+        return value
+
+
+gcfg = Config()
+gcfg.load("config.ini")
+gcfg.resolve_paths()

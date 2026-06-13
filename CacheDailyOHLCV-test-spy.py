@@ -7,7 +7,7 @@ import os
 import time
 from datetime import datetime, date
 from CacheDailyOHLCV import CachedailyOHLCV, get_spy_ticker_list
-from config import YF_DATA_PATH
+from config import gcfg
 
 
 def get_old_files(cyf, path):
@@ -30,11 +30,11 @@ def run():
     delta_days = 365*30
 
     sp500_list = get_spy_ticker_list()
-    cyf = CachedailyOHLCV(YF_DATA_PATH, START_DATE, delta_days)
+    cyf = CachedailyOHLCV(gcfg.paths.yf_data_path, START_DATE, delta_days)
     print("{} start {} download".format(datetime.today(), "spy_list"))
     cyf.download_list(sp500_list)
 
-    get_old_files(cyf, YF_DATA_PATH)
+    get_old_files(cyf, gcfg.paths.yf_data_path)
 
 
 if __name__ == '__main__':

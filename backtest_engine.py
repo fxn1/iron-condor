@@ -11,9 +11,9 @@ All market data comes from strategy.get_market_data().
 Works for both SPX iron condor and stock put spread strategies.
 
 """
-
+import os
 from datetime import datetime, timedelta
-from config import *
+from config import gcfg
 from base_strategy import TradeEntryReason
 from reporting import print_results, export_trades_to_csv
 
@@ -74,7 +74,7 @@ def run_backtest(start_date, delta_days, strategy, run_title):
     total_call_rolls      = 0
     days_in_warn          = 0
     days_in_roll_zone     = 0
-    max_concurrent        = 0  # Still tracked for INFORMATIONAL output
+    max_concurrent        = 0
 
     log("  Running backtest...")
 
@@ -101,7 +101,7 @@ def run_backtest(start_date, delta_days, strategy, run_title):
             close       = md['close']
             put_vol     = md['put_vol']
             call_vol    = md['call_vol']
-            stats       = trade.manage_position(current_date, close, RISK_FREE_RATE, put_vol, call_vol)
+            stats       = trade.manage_position(current_date, close, gcfg.market.risk_free_rate, put_vol, call_vol)
             days_in_warn      += stats.get('days_in_warn',      0)
             days_in_roll_zone += stats.get('days_in_roll_zone', 0)
             total_put_rolls   += stats.get('put_rolls',         0)
@@ -129,7 +129,7 @@ def run_backtest(start_date, delta_days, strategy, run_title):
                 open_trades.append(new_trade)
                 trades_entered  += 1
                 reentry_trades  += 1
-        elif potential_reentries:
+        else:
             skipped_duplicate_exp += 1
 
         # Regular entries
@@ -146,7 +146,6 @@ def run_backtest(start_date, delta_days, strategy, run_title):
                 skipped_duplicate_exp += 1
 
         # Track peak concurrent for INFORMATIONAL output. Capital sizing
-        # in this variant uses the fixed CONCURRENT_TRADES constant instead.
         max_concurrent = max(max_concurrent, len(open_trades))
 
     # Force-close anything still open at end of period
@@ -181,7 +180,7 @@ def run_backtest(start_date, delta_days, strategy, run_title):
         exit_reasons[r] = exit_reasons.get(r, 0) + 1
 
     # derived — computed once after the loop
-    total_pnl_dollars = total_pnl * 100 * NUM_CONTRACTS
+    total_pnl_dollars = total_pnl * 100 * strategy.cfg.num_contracts
     avg_win = gp / winning if winning else 0
     avg_loss = gl / losing if losing else 0
     win_rate = winning / n * 100 if n else 0
@@ -206,10 +205,10 @@ def run_backtest(start_date, delta_days, strategy, run_title):
         'avg_loss':             avg_loss,
         'profit_factor':        pf,
         'max_drawdown':         mdd,
-        'max_drawdown_dollars': mdd * 100 * NUM_CONTRACTS,
+        'max_drawdown_dollars': mdd * 100 * strategy.cfg.num_contracts,
         'exit_reasons':         exit_reasons,
         'closed_trades':        closed_trades,
-        'num_contracts':        NUM_CONTRACTS,
+        'num_contracts':        strategy.cfg.num_contracts,
         'total_put_rolls':      total_put_rolls,
         'total_call_rolls':     total_call_rolls,
         'rolled_trades':        rolled_trades,
@@ -255,9 +254,9 @@ def run_main(*, strategy, title, script_name, csv_filename, start_date, end_date
     results = run_backtest(start_date, delta_days, strategy, title)
 
     strategy.print_extra_results(results, years)  # ← stock sections; no-op for SPX
-    print_results(results, title, years)
+    print_results(strategy.cfg, results, title, years)
 
-    csv_path = os.path.join(OUTPUT_PATH, csv_filename)
+    csv_path = os.path.join(gcfg.paths.yf_data_path, csv_filename)
     export_trades_to_csv(results, csv_path)
     log()
     # TODO: move below to reporting, and make it more generic (not SPX-specific) by passing in the wing width or other relevant parameters via results or strategy.
@@ -272,10 +271,7 @@ def run_main(*, strategy, title, script_name, csv_filename, start_date, end_date
         return results
 
     avg_credit = sum(t.cumulative_credit for t in results['closed_trades']) / len(results['closed_trades'])
-    # Fixed capital sizing using the observed peak concurrent open trades = CONCURRENT_TRADES.
-    # (Original reviewer request was * 4, but tracking showed peak = CONCURRENT_TRADES, so
-    # using 4 understates capital ~20% and overstates ROC ~25%.)
-    margin = (WING_WIDTH - avg_credit) * 100 * CONCURRENT_TRADES
+    margin = (strategy.cfg.wing_width - avg_credit) * 100 * results['max_concurrent']  # peak concurrent open trades, not total trades
     annual_pnl = results['total_pnl_dollars'] / years
     total_return = results['total_pnl_dollars'] / margin
     roc = ((1 + total_return) ** (1 / years) - 1) * 100 if margin and years > 0 else 0

@@ -1,9 +1,9 @@
-import os
 from datetime import date
 import pandas as pd
 import pandas_ta_classic as ta
 from CacheDailyOHLCV import CachedailyOHLCV
-from config import YF_DATA_PATH
+from config import gcfg
+
 
 # support
 # find support/resistance with pivots
@@ -23,7 +23,7 @@ def find_support(close: pd.Series, lookback=20) -> float:
 
 START_DATE = date.fromisoformat("2025-06-01")
 delta_days = 365*30
-cache = CachedailyOHLCV(YF_DATA_PATH, START_DATE, delta_days)  # instantiate first
+cache = CachedailyOHLCV(gcfg.paths.yf_data_path, START_DATE, delta_days)  # instantiate first
 df = cache.update_ticker('AAPL')
 # df = cache.get_ticker('AAPL')
 

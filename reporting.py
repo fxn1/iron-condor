@@ -1,7 +1,6 @@
 import csv
 from datetime import datetime
 
-from config import *
 
 # ============================================================================
 # OUTPUT
@@ -12,7 +11,7 @@ def log(msg=""):
     print(f"{datetime.now()}  {msg}")
 
 
-def print_results(results, title, years):
+def print_results(cfg, results, title, years):
     log()
     log("=" * 80)
     log(f"{title} ")
@@ -24,7 +23,6 @@ def print_results(results, title, years):
     log(f"    Total Trades:           {results['total_trades']}")
     log(f"    Monday Entries:         {results['trades_entered'] - results['reentry_trades']}")
     log(f"    Re-entry Trades:        {results['reentry_trades']}")
-    log(f"    Skipped (VIX > {VIX_NO_TRADE}):     {results['trades_skipped_vix']}")
     log(f"    Winning Trades:         {results['winning_trades']}")
     log(f"    Losing Trades:          {results['losing_trades']}")
     log(f"    Win Rate:               {results['win_rate']:.1f}%")
@@ -57,18 +55,16 @@ def print_results(results, title, years):
         return
 
     avg_credit = sum(t.cumulative_credit for t in results['closed_trades']) / len(results['closed_trades'])
-    margin_per = (WING_WIDTH - avg_credit) * 100
-    # Fixed capital sizing using the observed peak concurrent open trades = CONCURRENT_TRADES.
-    # (Reviewer originally asked for * 4, but tracking showed peak = CONCURRENT_TRADES.)
-    total_margin = margin_per * results['num_contracts'] * CONCURRENT_TRADES
+    margin_per = (cfg.wing_width - avg_credit) * 100
+    # Fixed capital sizing using the observed peak concurrent open trades = results['max_concurrent'].
+    total_margin = margin_per * results['num_contracts'] * results['max_concurrent']
     annual_pnl = results['total_pnl_dollars'] / years
     total_return = (total_margin + results['total_pnl_dollars']) / total_margin - 1
     roc = ((1 + total_return) ** (1 / years) - 1) * 100 if total_margin and years > 0 else 0
 
     log(f"    Avg Credit/Trade:       ${avg_credit:.2f} (incl. rolls)")
     log(f"    Margin per Contract:    ${margin_per:,.2f}")
-    log(f"    Concurrent Trades:      {CONCURRENT_TRADES}  (fixed - matches observed peak)")
-    log(f"    Peak Observed:          {results['max_concurrent']}  (informational)")
+    log(f"    Peak Observed:          {results['max_concurrent']}  ( matches observed peak)")
     log(f"    Total Capital Required: ${total_margin:,.2f}")
     log(f"    Annual P&L:             ${annual_pnl:,.2f}")
     log(f"    Annual ROC:             {roc:.1f}% ((1+{total_return}**(1/{years})-1)")
@@ -148,12 +144,12 @@ def export_trades_to_csv(results, filename):
 # ============================================================================
 
 
-def print_stock_results(results, years):
+def print_stock_results(results):
     """Stock put spread report — calls all 4 stock-specific sections."""
     _print_ticker_pnl(results)
     _print_earnings_hit_rate(results)
     _print_pnl_ranked(results)
-    _print_stock_yearly_breakdown(results, years)
+    _print_stock_yearly_breakdown(results)
 
 
 def _print_ticker_pnl(results):
@@ -216,7 +212,7 @@ def _print_pnl_ranked(results):
     log()
 
 
-def _print_stock_yearly_breakdown(results, years):
+def _print_stock_yearly_breakdown(results):
     """Yearly breakdown per ticker — same structure as SPX yearly breakdown."""
     log()
     log("  YEARLY BREAKDOWN BY TICKER")

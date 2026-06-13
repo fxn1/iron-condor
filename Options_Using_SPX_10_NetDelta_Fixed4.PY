@@ -17,6 +17,7 @@ Author: Claude (adapted for PEC)
 Date: May 2026
 ================================================================================
 """
+import os
 from datetime import timedelta, datetime
 import pandas as pd
 from backtest_engine import run_main
@@ -25,7 +26,7 @@ from base_strategy import BaseStrategy, get_next_friday, is_monday, TradeEntryRe
 from volatility import calculate_historical_volatility
 from pricing import black_scholes_price, find_strike_for_delta
 from trade import IronCondorTrade
-from config import *
+from config import gcfg
 
 
 def log(msg=""):
@@ -39,11 +40,11 @@ def log(msg=""):
 class Fixed4Strategy(BaseStrategy):
     """
     SPX Iron Condor — Net-Delta Roll Management, Fixed ×5 capital variant.
-    Capital sized to a fixed assumption of CONCURRENT_TRADES (=5) concurrent trades.
     See backtest_engine.py for the shared engine.
     """
 
     def __init__(self):
+        self.cfg = gcfg.spx
         self.vix_data = {}
         self.spx_data = {}
         self.sorted_dates = []
@@ -55,7 +56,7 @@ class Fixed4Strategy(BaseStrategy):
 
     # BaseStrategy — unified interface engine calls
     def load_data(self, start_date, delta_days):
-        VIX_DATA_PATH = os.path.normpath(os.path.join(DATA_PATH, 'VIX_Daily_Data.xlsx'))
+        VIX_DATA_PATH = os.path.normpath(os.path.join(gcfg.paths.data_path, 'VIX_Daily_Data.xlsx'))
 
         self.vix_data = None
         if os.path.exists(VIX_DATA_PATH):
@@ -80,7 +81,7 @@ class Fixed4Strategy(BaseStrategy):
         return [self.should_enter_trade(current_date)]
 
     def should_reenter_after_exit(self, trade) -> TradeSignal:
-        if trade.exited_at_profit_target and self._vix(trade.exit_date) <= VIX_NO_TRADE:
+        if trade.exited_at_profit_target and self._vix(trade.exit_date) <= self.cfg.vix_no_trade:
             return TradeSignal(reason=TradeEntryReason.SHOULD_ENTER)
         return TradeSignal(reason=TradeEntryReason.SKIPPED_VIX)
 
@@ -94,22 +95,22 @@ class Fixed4Strategy(BaseStrategy):
         bar        = self.spx_data.get(current_date, {})
         spx_price  = bar.get('close', 0)
         volatility = self._volatility(current_date)
-        expiration = get_next_friday(current_date, TARGET_DTE)
+        expiration = get_next_friday(current_date, self.cfg.target_dte)
         dte        = (expiration - current_date).days
         T          = dte / 365.0
         put_vol    = volatility * 1.10
         call_vol   = volatility * 0.95
 
-        put_short  = find_strike_for_delta(spx_price, PUT_DELTA,  T, RISK_FREE_RATE, put_vol,  'put')
-        put_long   = put_short - WING_WIDTH
-        call_short = find_strike_for_delta(spx_price, CALL_DELTA, T, RISK_FREE_RATE, call_vol, 'call')
-        call_long  = call_short + WING_WIDTH
+        put_short  = find_strike_for_delta(spx_price, self.cfg.put_delta,  T, gcfg.market.risk_free_rate, put_vol,  'put')
+        put_long   = put_short - self.cfg.wing_width
+        call_short = find_strike_for_delta(spx_price, self.cfg.call_delta, T, gcfg.market.risk_free_rate, call_vol, 'call')
+        call_long  = call_short + self.cfg.wing_width
 
-        ps = black_scholes_price(spx_price, put_short,  T, RISK_FREE_RATE, put_vol,  'put')
-        pl = black_scholes_price(spx_price, put_long,   T, RISK_FREE_RATE, put_vol,  'put')
+        ps = black_scholes_price(spx_price, put_short,  T, gcfg.market.risk_free_rate, put_vol,  'put')
+        pl = black_scholes_price(spx_price, put_long,   T, gcfg.market.risk_free_rate, put_vol,  'put')
 
-        cs = black_scholes_price(spx_price, call_short, T, RISK_FREE_RATE, call_vol, 'call')
-        cl = black_scholes_price(spx_price, call_long,  T, RISK_FREE_RATE, call_vol, 'call')
+        cs = black_scholes_price(spx_price, call_short, T, gcfg.market.risk_free_rate, call_vol, 'call')
+        cl = black_scholes_price(spx_price, call_long,  T, gcfg.market.risk_free_rate, call_vol, 'call')
 
         return IronCondorTrade(
             entry_date=current_date,
@@ -122,7 +123,7 @@ class Fixed4Strategy(BaseStrategy):
             call_short=call_short,
             call_long=call_long,
             call_credit=cs - cl,
-            num_contracts=NUM_CONTRACTS,
+            num_contracts=self.cfg.num_contracts,
             trade_id=trade_id,
         )
 
@@ -149,24 +150,24 @@ class Fixed4Strategy(BaseStrategy):
         log("  STRATEGY")
         log("  " + "-" * 60)
         log(f"  Underlying:    SPX (real 1-min data, resampled to daily)")
-        log(f"  Strategy:      18/14 delta IC, ${WING_WIDTH} wings, Monday entry, {TARGET_DTE} DTE")
-        log(f"  Roll rule:     |net delta| > {NET_DELTA_ROLL}  (warn at +/-{NET_DELTA_WARN})")
-        log(f"  Capital:       fixed assumption of {CONCURRENT_TRADES} concurrent trades")
-        log(f"    PUT/CALL Delta:    {PUT_DELTA} / {CALL_DELTA}")
-        log(f"    Profit Target:     {int(PROFIT_TARGET*100)}%")
-        log(f"    Stop Loss:         {STOP_LOSS_MULTIPLIER}x credit per leg (worst-intraday)")
+        log(f"  Strategy:      18/14 delta IC, ${self.cfg.wing_width} wings, Monday entry, {self.cfg.target_dte} DTE")
+        log(f"  Roll rule:     |net delta| > {self.cfg.net_delta_roll}  (warn at +/-{self.cfg.net_delta_warn})")
+        log(f"    PUT/CALL Delta:    {self.cfg.put_delta} / {self.cfg.call_delta}")
+        log(f"    Profit Target:     {int(self.cfg.profit_target*100)}%")
+        log(f"    Stop Loss:         {self.cfg.stop_loss_multiplier}x credit per leg (worst-intraday)")
         log(f"    10 DTE Exit:       Smart exit, gap-aware")
-        log(f"    VIX No-Trade:      > {VIX_NO_TRADE}")
+        log(f"    VIX No-Trade:      > {self.cfg.vix_no_trade}")
         log()
 
     def print_extra_results(self, results, years):
         log("  NET-DELTA MANAGEMENT")
         log("  " + "-" * 60)
-        log(f"    Days in Warn band ({NET_DELTA_WARN}-{NET_DELTA_ROLL}):     {results['days_in_warn']}")
-        log(f"    Days in Roll zone (>{NET_DELTA_ROLL}):       {results['days_in_roll_zone']}")
+        log(f"    Days in Warn band ({self.cfg.net_delta_warn}-{self.cfg.net_delta_roll}):     {results['days_in_warn']}")
+        log(f"    Days in Roll zone (>{self.cfg.net_delta_roll}):       {results['days_in_roll_zone']}")
         log(f"    Trades that rolled at least 1x:    {results['rolled_trades']}")
         log(f"    Total PUT-side rolls:              {results['total_put_rolls']}")
         log(f"    Total CALL-side rolls:             {results['total_call_rolls']}")
+        log(f"    Skipped (VIX > {self.cfg.vix_no_trade}):             {results['trades_skipped_vix']}")
         log()
 
     def check_expiration_used(self, current_date) -> bool:
@@ -190,7 +191,7 @@ class Fixed4Strategy(BaseStrategy):
     def should_enter_trade(self, current_date) -> TradeSignal:
         if not is_monday(current_date):
             return TradeSignal(reason=TradeEntryReason.NOT_MONDAY)
-        if self._vix(current_date) > VIX_NO_TRADE:
+        if self._vix(current_date) > self.cfg.vix_no_trade:
             return TradeSignal(reason=TradeEntryReason.SKIPPED_VIX)
         if self.check_expiration_used(current_date):
             return TradeSignal(reason=TradeEntryReason.SKIPPED_DUP_EXP)
@@ -199,9 +200,8 @@ class Fixed4Strategy(BaseStrategy):
     def _vix(self, current_date):
         return self.vix_data[current_date]['close'] if current_date in self.vix_data else 18.0
 
-    @staticmethod
-    def _exp_key(current_date):
-        return get_next_friday(current_date, TARGET_DTE)
+    def _exp_key(self, current_date):
+        return get_next_friday(current_date, self.cfg.target_dte)
 
     def _volatility(self, ts: pd.Timestamp) -> float:
         if ts not in self.sorted_dates:
@@ -222,8 +222,4 @@ if __name__ == "__main__":
         csv_filename  = "SPX_IronCondor_10Year_NetDelta_Fixed4_Backtest.csv",
         start_date   = datetime(2016, 5, 9),
         end_date     = datetime(2026, 5, 8),
-        extra_summary_lines = lambda r: [
-            f"  |{'(fixed {} concurrent)'.format(CONCURRENT_TRADES):^30}"
-            f"{'peak obs: {}'.format(r['max_concurrent']):^30}|",
-        ],
     )

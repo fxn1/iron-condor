@@ -10,7 +10,7 @@ This repository is a Python backtesting workspace for options strategies.
 | `StockPutSpreadStrategy`   | strategy_stock_put_spread.py            | Put Credit Spread  |
 | `NetDeltaStrategy`         | Options_Using_SPX_10_NetDelta.PY        | Iron Condor (Open) |
 
-SPX Iron Condor : [Fixed4Strategy](Options_Using_SPX_10_NetDelta_Fixed4.PY) - [config](./config.py)
+SPX Iron Condor : [Fixed4Strategy](Options_Using_SPX_10_NetDelta_Fixed4.PY) - [config](./config.ini)
 
 1. Net-Delta Roll Management, Fixed ×5 capital variant.
 2. Capital sized to a fixed assumption of CONCURRENT_TRADES (=5) concurrent trades.
@@ -26,7 +26,7 @@ SPX Iron Condor : [Fixed4Strategy](Options_Using_SPX_10_NetDelta_Fixed4.PY) - [c
 12. expiration settlement
 13. same-day collision handling where stop loss takes precedence over profit target
     
-Put credit spread : [StockPutSpreadStrategy](strategy_stock_put_spread.py) - [config_stocks](config_stocks.py)
+Put credit spread : [StockPutSpreadStrategy](strategy_stock_put_spread.py) - [config_stocks](config.ini)
 1. Entry  : day after earnings (`earnings_lookahead_days`)
 2. EMA must be higher than it was `ema_trend_days` ago.
 3. RSI slope must exceed `rsi_slope_min`.
@@ -149,7 +149,7 @@ pip install -e .[dev]
 9. Rename `Options_Using_SPX_10_NetDelta_Fixed4.PY` to a lowercase `.py` filename and update imports so the code is portable across case-sensitive systems. 
 10. Current implementation caveat: the stock strategy is not yet fully wired to the shared reporting/export path. `reporting.print_results()` and `export_trades_to_csv()` assume iron-condor attributes such as `put_rolls`, `call_rolls`, `put_short`, and `call_short`, which `PutSpreadTrade` does not expose.
 11. `backtest_engine.py` uses `sorted_dates.index(date_str)` inside the main date loop, which is simple but O(n^2). It likely does not matter for this dataset, but it is easy to optimize if runs become slow.
-12. `put_spread.py` uses `STOP_LOSS_MULTIPLIER` from `config.py`; `STOCK_STOP_LOSS_MULT` in `config_stocks.py` is currently not applied. 
+12. `put_spread.py` uses `STOP_LOSS_MULTIPLIER` from `config.ini`; `STOCK_STOP_LOSS_MULT` in `config_stocks.py` is currently not applied. 
 13. `Options_Using_SPX_10_NetDelta.PY` subclasses `Fixed4Strategy` but does not currently change behavior. Its TODO mentions `create_new_trade`, but the current strategy interface method is `create_trade`. 
 14. Naming is slightly inconsistent: `Fixed4Strategy`, `Fixed4` filenames, and comments mention fixed 4 in places, but the active capital assumption is fixed 5 concurrent trades.
 15. `pyproject.toml` contains mojibake in comments, likely from an encoding mismatch. It probably still parses, but the comments render poorly.

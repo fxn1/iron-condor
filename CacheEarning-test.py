@@ -1,12 +1,12 @@
-from datetime import timedelta, date, datetime
-from config import YF_DATA_PATH
+from datetime import datetime
+from config import gcfg
 
 from CacheEarning import EarningsCache
-from CacheDailyOHLCV import CachedailyOHLCV, get_spy_ticker_list
+from CacheDailyOHLCV import get_spy_ticker_list
 
 STOCK_UNIVERSE = get_spy_ticker_list()
 # STOCK_UNIVERSE = ['GOOG', 'AAPL', 'MSFT']   # list, not string
-earnings_cache = EarningsCache(path=YF_DATA_PATH)
+earnings_cache = EarningsCache(path=gcfg.paths.yf_data_path)
 # earnings_cache.download_list(STOCK_UNIVERSE)   # run once to populate
 
 ii = 0
