@@ -110,14 +110,15 @@ def run_backtest(start_date, delta_days, strategy, run_title):
         # 3) Process closed trades and queue re-entries
         potential_reentries = []
         for trade in trades_to_close:
+            ticker = trade.ticker
             strategy.fill_expiration_price(trade)
             open_trades.remove(trade)
             closed_trades.append(trade)
             signal = strategy.should_reenter_after_exit(trade)
             # only one reentry per day
-            if signal.reason == TradeEntryReason.SHOULD_ENTER and not strategy.check_expiration_used(current_date):
+            if signal.reason == TradeEntryReason.SHOULD_ENTER and not strategy.check_expiration_used(current_date, ticker):
                 potential_reentries.append(signal)
-                strategy.mark_reentry_expiration_used(current_date)  # ← marks today, not trade expiration date
+                strategy.mark_reentry_expiration_used(current_date, ticker)  # ← marks today, not trade expiration date
                 profit_target_exits += 1
 
         # Re-entries
@@ -256,7 +257,7 @@ def run_main(*, strategy, title, script_name, csv_filename, start_date, end_date
     strategy.print_extra_results(results, years)  # ← stock sections; no-op for SPX
     print_results(strategy.cfg, results, title, years)
 
-    csv_path = os.path.join(gcfg.paths.yf_data_path, csv_filename)
+    csv_path = os.path.join(gcfg.paths.output_path, csv_filename)
     export_trades_to_csv(results, csv_path)
     log()
     # TODO: move below to reporting, and make it more generic (not SPX-specific) by passing in the wing width or other relevant parameters via results or strategy.

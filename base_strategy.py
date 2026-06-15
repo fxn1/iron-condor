@@ -14,23 +14,18 @@ import pandas as pd
 
 def get_next_friday(from_date, days_out=30):
     target = from_date + timedelta(days=days_out)
-    days_to_friday = (4 - target.weekday()) % 7
-    if days_to_friday == 0 and target.weekday() != 4:
-        days_to_friday = 7
+    days_to_friday = (4 - target.weekday()) % 7  # Roll to next Friday
     friday = target + timedelta(days=days_to_friday)
     if friday <= from_date:
         friday += timedelta(days=7)
     return friday
 
 
-def is_monday(d): return d.weekday() == 0
-
-
 class TradeEntryReason(Enum):
     SHOULD_ENTER    = "should_enter"
     SKIPPED_VIX     = "skipped_vix"
     SKIPPED_DUP_EXP = "skipped_dup_exp"
-    NOT_MONDAY      = "not_monday"
+    NOT_WEEKDAY      = "not_weekday"
     SKIPPED_LOW_STRIKE = "skipped_low_strike"
     NO_SIGNAL       = "no_signal"       # generic — used by stock strategy
 
@@ -47,6 +42,10 @@ class TradeSignal:
 
 
 class BaseStrategy(ABC):
+
+    def __init__(self):
+        self.vix_data = None
+        self.used_expirations = set()
 
     @abstractmethod
     def load_data(self, start_date, delta_days):
@@ -65,11 +64,17 @@ class BaseStrategy(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def mark_expiration_used(self, trade):
+    def _exp_key(self, current_date, ticker):
         raise NotImplementedError
 
-    def mark_reentry_expiration_used(self, current_date):
-        raise NotImplementedError
+    def mark_expiration_used(self, trade):
+        self.used_expirations.add((trade.ticker, trade.expiration_date))
+
+    def mark_reentry_expiration_used(self, current_date, ticker):
+        self.used_expirations.add(self._exp_key(current_date, ticker))
+
+    def check_expiration_used(self, current_date, ticker) -> bool:
+        return self._exp_key(current_date, ticker) in self.used_expirations
 
     @abstractmethod
     def create_trade(self, current_date, trade_id, signal: TradeSignal):
@@ -83,12 +88,8 @@ class BaseStrategy(ABC):
         Must include: close, high, low, open, vix, volatility, put_vol, call_vol"""
         raise NotImplementedError
 
-    @abstractmethod
-    def check_expiration_used(self, current_date) -> bool:
-        raise NotImplementedError
-
     def get_trading_dates(self, start_date, end_date) -> list:
-        """Return sorted list of trading datetimes for the backtest period.
+        """Return sorted list of trading datetime for the backtest period.
         Default: subclass must override or engine passes dates directly."""
         raise NotImplementedError
 
@@ -106,3 +107,10 @@ class BaseStrategy(ABC):
     def fill_expiration_price(self, trade):
         """fixed4 need to fill expiration price."""
         pass
+
+    def _vix(self, current_date):
+        if self.vix_data is None:
+            return 18.0
+        if current_date not in self.vix_data:
+            return 18.0
+        return self.vix_data[current_date]['close']

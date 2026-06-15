@@ -9,10 +9,10 @@ Extends BaseStrategy.  The stock backtest engine (backtest_engine_stocks.py)
 calls these methods; the SPX engine is untouched.
 """
 
-from datetime import timedelta, datetime
+from datetime import datetime
 import pandas as pd
 from backtest_engine import run_main
-from base_strategy import BaseStrategy, TradeSignal, TradeEntryReason
+from base_strategy import BaseStrategy, TradeSignal, TradeEntryReason, get_next_friday
 from CacheDailyOHLCV import CachedailyOHLCV, get_spy_ticker_list
 from CacheEarning import EarningsCache
 from volatility import calculate_historical_volatility
@@ -36,11 +36,12 @@ class StockPutSpreadStrategy(BaseStrategy):
         """
         price_data    : {ticker: pd.DataFrame}  from cachebt.download_list()
         """
+        super().__init__()
+        self.cfg             = gcfg.stocks
         self.price_data      = {}
         self.earnings_cache  = None
-        self.used_expirations = set()
         self.sorted_dates     = {}    # {ticker: [sorted list of dates in price_data]}
-        self.cfg               = gcfg.stocks
+        self._vol_debug_count = 0   # TODO: debug
 
     # ── BaseStrategy: ───────────────────
 
@@ -57,7 +58,22 @@ class StockPutSpreadStrategy(BaseStrategy):
             df = self.price_data[ticker]
             window = dates[idx - 20: idx + 1]
             hist = [float(df.loc[d, 'Close']) for d in window]
-            return calculate_historical_volatility(hist) * self.cfg.vol_scalar
+            hv = calculate_historical_volatility(hist)
+            vol = hv * self.cfg.vol_scalar
+            # TODO: debug
+            if ticker in gcfg.stocks.debug_tickers:
+                log(f"{ts.date()} {ticker} hv={hv:.3f}")
+            if self._vol_debug_count < gcfg.stocks.debug_trade_id:
+                print(
+                    f"VOL {self._vol_debug_count + 1}: "
+                    f"{ticker} "
+                    f"{ts.date()} "
+                    f"hv={hv:.3f} "
+                    f"scalar={self.cfg.vol_scalar:.2f} "
+                    f"vol={vol:.3f}"
+                )
+                self._vol_debug_count += 1
+            return vol
         return 0.18
 
     # ── BaseStrategy interface ────────────────────────────────────────────
@@ -81,18 +97,23 @@ class StockPutSpreadStrategy(BaseStrategy):
         """
         Scan every ticker in the universe for today's entry signal.
         Returns list of (ticker, strike) for all that qualify and whose
-        expiration is not already in used_expirations.
+        expiration is not already used for this ticker.  Engine creates one trade per signal.
         Called by backtest_engine_stocks.py instead of should_enter_trade().
         """
+        if self.cfg.entry_weekday != "ALL":
+            weekday = current_date.strftime("%A").upper()
+            if weekday != self.cfg.entry_weekday.upper():
+                return [TradeSignal(reason=TradeEntryReason.NOT_WEEKDAY)]
+        if 0 <= self.cfg.vix_no_trade < self._vix(current_date):
+            return [TradeSignal(reason=TradeEntryReason.SKIPPED_VIX)]
         signals = []
         for ticker, price_df in self.price_data.items():
             earnings_dates = self.earnings_cache.get_earnings_dates(ticker)
             # log(f" Loaded  {len(earnings_dates)} earnings for ticker={ticker}")
             entered, strike = scan(current_date, price_df, earnings_dates, self.cfg)
             if entered:
-                exp_key = (ticker, _get_expiration(current_date))
-                if exp_key not in self.used_expirations:
-                    if strike - self.cfg.wing_width > 5.0:  # TODO: self.cfg min long strike
+                if not self.check_expiration_used(current_date, ticker):
+                    if strike - self.cfg.wing_width > self.cfg.min_long_strike:
                         signals.append(TradeSignal(reason=TradeEntryReason.SHOULD_ENTER, ticker=ticker, strike=strike))
                     else:
                         signals.append(TradeSignal(reason=TradeEntryReason.SKIPPED_LOW_STRIKE, ticker=ticker))
@@ -106,11 +127,8 @@ class StockPutSpreadStrategy(BaseStrategy):
         """No re-entry for stock put spreads — one trade per earnings cycle."""
         return TradeSignal(reason=TradeEntryReason.NO_SIGNAL)
 
-    def mark_expiration_used(self, trade):
-        self.used_expirations.add((trade.ticker, trade.expiration_date))
-
-    def mark_reentry_expiration_used(self, current_date):
-        pass  # no re-entry for stocks
+    def _exp_key(self, current_date, ticker):
+        return ticker, get_next_friday(current_date, self.cfg.target_dte)
 
     def create_trade(self, current_date, trade_id, signal: TradeSignal):
         """
@@ -120,8 +138,9 @@ class StockPutSpreadStrategy(BaseStrategy):
         ticker = signal.ticker
         price = self._price(ticker, current_date)
         volatility = self._volatility(ticker, current_date)
-        expiration = _get_expiration(current_date)
+        expiration = get_next_friday(current_date, self.cfg.target_dte)
         return create_put_spread_from_scan(
+            ticker            = ticker,
             entry_date        = current_date,
             expiration_date   = expiration,
             spx_price         = price,
@@ -129,10 +148,7 @@ class StockPutSpreadStrategy(BaseStrategy):
             short_strike      = signal.strike,
             volatility        = volatility,
             trade_id          = trade_id,
-            wing_width        = self.cfg.wing_width,
-            profit_target_pct = self.cfg.profit_target,
-            num_contracts     = self.cfg.num_contracts,
-            ticker            = ticker,
+            cfg               = self.cfg,
         )
 
     def get_market_data(self, trade, ts: pd.Timestamp) -> dict:
@@ -151,10 +167,6 @@ class StockPutSpreadStrategy(BaseStrategy):
             'put_vol':    volatility * 1.10,
             'call_vol':   volatility * 0.95,
         }
-
-    def check_expiration_used(self, current_date) -> bool:
-        """stock strategy does not prevent multiple trades on same expiration date, since different tickers can have same expiration date.  Instead, check in scan_all_tickers() for each ticker + expiration combination."""
-        return False   # stock strategy does not prevent multiple trades on same expiration date
 
     def get_trading_dates(self, start_date, end_date) -> list:
         sorted_dates = next(iter(self.sorted_dates.values()))
@@ -176,28 +188,6 @@ class StockPutSpreadStrategy(BaseStrategy):
     def fill_expiration_price(self, trade):
         pass
     # ── internal helpers ────────────────────────────────────────────
-
-    def should_enter_trade(self, current_date) -> TradeEntryReason:
-        """
-        Not used by the stock engine — stock engine calls scan_all_tickers()
-        which returns per-ticker signals.  Implemented here to satisfy the
-        abstract base; raises clearly if called by mistake.
-        """
-        raise NotImplementedError(
-            "StockPutSpreadStrategy uses scan_all_tickers(). "
-            "should_enter_trade() is for the SPX engine only."
-        )
-
-
-def _get_expiration(entry_date):
-    """Next standard expiration approximately cfg.target_dte days out."""
-    target = entry_date + timedelta(days=gcfg.stocks.target_dte)
-    # Roll to next Friday
-    days_to_friday = (4 - target.weekday()) % 7
-    friday = target + timedelta(days=days_to_friday)
-    if friday <= entry_date:
-        friday += timedelta(days=7)
-    return friday
 
 
 if __name__ == "__main__":

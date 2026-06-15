@@ -18,10 +18,6 @@ Trade
             +-- IronCondorTradeOpen
 '''
 
-# ============================================================================
-# ABSTRACT BASE
-# ============================================================================
-
 
 class Trade(ABC):
     """
@@ -32,13 +28,14 @@ class Trade(ABC):
     abstract methods and optionally override manage_position / roll_stats.
     """
 
-    def __init__(self, entry_date, expiration_date, spx_price, vix, cumulative_credit, num_contracts=1, trade_id=0):
+    def __init__(self, ticker, entry_date, expiration_date, spx_price, vix, cumulative_credit, cfg, trade_id):
+        self.ticker             = ticker
         self.trade_id           = trade_id
         self.entry_date         = entry_date
         self.expiration_date    = expiration_date
         self.spx_price_at_entry = spx_price
         self.vix_at_entry       = vix
-        self.num_contracts      = num_contracts
+        self.cfg                = cfg
 
         # Credit / profit target — subclass __init__ passes initial credit;
         # rolls update cumulative_credit
@@ -65,7 +62,6 @@ class Trade(ABC):
         self.call_long  = None
         self.call_credit = 0.0
         self.call_exit_reason = None
-
 
     # ── must implement ────────────────────────────────────────────────────
 
@@ -123,16 +119,8 @@ class IronCondorTrade(Trade):
       total_pnl = banked_pnl_from_rolls + open_put_pnl + open_call_pnl
     """
 
-    def __init__(self, entry_date, expiration_date, spx_price, vix,
-                 put_short, put_long, put_credit,
-                 call_short, call_long, call_credit,
-                 num_contracts=1, trade_id=0):
-        super().__init__(
-            entry_date, expiration_date, spx_price, vix,
-            cumulative_credit = put_credit + call_credit,
-            num_contracts     = num_contracts,
-            trade_id          = trade_id,
-        )
+    def __init__(self, ticker, entry_date, expiration_date, spx_price, vix, put_short, put_long, put_credit, call_short, call_long, call_credit, cfg, trade_id):
+        super().__init__(ticker, entry_date, expiration_date, spx_price, vix, cumulative_credit = put_credit + call_credit, cfg = cfg, trade_id = trade_id,)
 
         # Current put spread
         self.put_short = put_short
@@ -169,8 +157,8 @@ class IronCondorTrade(Trade):
     # ------------------------------------------------------------------ rolls
 
     def roll_put_side(self, current_date, spx_price, T, r, put_vol):
-        """Close the current put spread, open a new one at gcfg.spx.put_delta target."""
-        if len(self.put_rolls) >= gcfg.spx.max_rolls_per_side:
+        """Close the current put spread, open a new one at self.cfg.put_delta target."""
+        if len(self.put_rolls) >= self.cfg.max_rolls_per_side:
             return False
         # Realised PnL on the closing spread
         ps = black_scholes_price(spx_price, self.put_short, T, r, put_vol, 'put')
@@ -187,8 +175,8 @@ class IronCondorTrade(Trade):
         self.banked_pnl += realised
 
         # Open a new put spread at the target delta
-        new_short = find_strike_for_delta(spx_price, gcfg.spx.put_delta, T, r, put_vol, 'put')
-        new_long  = new_short - gcfg.spx.wing_width
+        new_short = find_strike_for_delta(spx_price, self.cfg.put_delta, T, r, put_vol, 'put')
+        new_long  = new_short - self.cfg.wing_width
         nps = black_scholes_price(spx_price, new_short, T, r, put_vol, 'put')
         npl = black_scholes_price(spx_price, new_long,  T, r, put_vol, 'put')
         new_credit = nps - npl
@@ -201,8 +189,8 @@ class IronCondorTrade(Trade):
         return True
 
     def roll_call_side(self, current_date, spx_price, T, r, call_vol):
-        """Close the current call spread, open a new one at gcfg.spx.call_delta target."""
-        if len(self.call_rolls) >= gcfg.spx.max_rolls_per_side:
+        """Close the current call spread, open a new one at self.cfg.call_delta target."""
+        if len(self.call_rolls) >= self.cfg.max_rolls_per_side:
             return False
         cs = black_scholes_price(spx_price, self.call_short, T, r, call_vol, 'call')
         cl = black_scholes_price(spx_price, self.call_long,  T, r, call_vol, 'call')
@@ -217,8 +205,8 @@ class IronCondorTrade(Trade):
         })
         self.banked_pnl += realised
 
-        new_short = find_strike_for_delta(spx_price, gcfg.spx.call_delta, T, r, call_vol, 'call')
-        new_long  = new_short + gcfg.spx.wing_width
+        new_short = find_strike_for_delta(spx_price, self.cfg.call_delta, T, r, call_vol, 'call')
+        new_long  = new_short + self.cfg.wing_width
         ncs = black_scholes_price(spx_price, new_short, T, r, call_vol, 'call')
         ncl = black_scholes_price(spx_price, new_long,  T, r, call_vol, 'call')
         new_credit = ncs - ncl
@@ -312,14 +300,14 @@ class IronCondorTrade(Trade):
             current_call_pnl = call_pnl_low = call_pnl_high = self.call_leg_pnl
 
         # Stop loss = worst-case intraday
-        put_stop_hit  = (self.put_leg_open  and put_pnl_low   < -self.put_credit  * gcfg.spx.stop_loss_multiplier)
-        call_stop_hit = (self.call_leg_open and call_pnl_high < -self.call_credit * gcfg.spx.stop_loss_multiplier)
+        put_stop_hit  = (self.put_leg_open  and put_pnl_low   < -self.put_credit  * self.cfg.stop_loss_multiplier)
+        call_stop_hit = (self.call_leg_open and call_pnl_high < -self.call_credit * self.cfg.stop_loss_multiplier)
 
         # Profit target = best-case intraday + banked PnL from rolls
         put_pnl  = put_pnl_high if self.put_leg_open  else self.put_leg_pnl
         call_pnl = call_pnl_low if self.call_leg_open else self.call_leg_pnl
         best_total_with_banked = self.banked_pnl + put_pnl + call_pnl
-        profit_target_hit = best_total_with_banked >= self.cumulative_credit * gcfg.spx.profit_target
+        profit_target_hit = best_total_with_banked >= self.cumulative_credit * self.cfg.profit_target
 
         if (put_stop_hit or call_stop_hit) and profit_target_hit:
             profit_target_hit = False  # stop wins on same-day collisions
@@ -342,7 +330,7 @@ class IronCondorTrade(Trade):
             return True
 
         if self.put_leg_open:
-            if vix > gcfg.spx.vix_exit_put:
+            if vix > self.cfg.vix_exit_put:
                 self._close_leg('put', current_put_pnl, "VIX Exit")
             elif put_stop_hit:
                 self._close_leg('put', put_pnl_low, "PUT:Stop Loss")
@@ -351,7 +339,7 @@ class IronCondorTrade(Trade):
             self._close_leg('call', call_pnl_high, "CALL:Stop Loss")
 
         # 10 DTE smart exit
-        if self.is_open and dte <= gcfg.spx.exit_dte:
+        if self.is_open and dte <= self.cfg.exit_dte:
             loss_threshold = -self.cumulative_credit * 0.50
 
             worst_put  = put_pnl_low_raw   if self.put_leg_open  else self.put_leg_pnl
@@ -404,7 +392,7 @@ class IronCondorTrade(Trade):
 
         if self.put_leg_open:
             if spx_price <= self.put_long:
-                self._close_leg('put', self.put_credit - gcfg.spx.wing_width, "Expiration")
+                self._close_leg('put', self.put_credit - self.cfg.wing_width, "Expiration")
             elif spx_price <= self.put_short:
                 self._close_leg('put', self.put_credit - (self.put_short - spx_price), "Expiration")
             else:
@@ -412,7 +400,7 @@ class IronCondorTrade(Trade):
 
         if self.call_leg_open:
             if spx_price >= self.call_long:
-                self._close_leg('call', self.call_credit - gcfg.spx.wing_width, "Expiration")
+                self._close_leg('call', self.call_credit - self.cfg.wing_width, "Expiration")
             elif spx_price >= self.call_short:
                 self._close_leg('call', self.call_credit - (spx_price - self.call_short), "Expiration")
             else:
@@ -426,14 +414,14 @@ class IronCondorTrade(Trade):
         if not (self.put_leg_open and self.call_leg_open):
             return stats  # only manage if both legs still open
         dte = (self.expiration_date - current_date).days
-        if dte <= gcfg.spx.exit_dte:
+        if dte <= self.cfg.exit_dte:
             return stats  # near expiration -> let smart-exit handle it
         T = max(dte / 365.0, 0.001)
         net_delta = self.net_position_delta(spx_price, T, r, put_vol, call_vol)
 
-        if gcfg.spx.net_delta_warn < abs(net_delta) <= gcfg.spx.net_delta_roll:
+        if self.cfg.net_delta_warn < abs(net_delta) <= self.cfg.net_delta_roll:
             stats['days_in_warn'] = 1
-        elif abs(net_delta) > gcfg.spx.net_delta_roll:
+        elif abs(net_delta) > self.cfg.net_delta_roll:
             stats['days_in_roll_zone'] = 1
             if net_delta > 0:
                 if self.roll_put_side(current_date, spx_price, T, gcfg.market.risk_free_rate, put_vol):
@@ -453,6 +441,10 @@ class IronCondorTrade(Trade):
 
 class IronCondorTradeOpen(IronCondorTrade):
     # --------------------------------------------------------- exit checks
+
+    def __init__(self, ticker, entry_date, expiration_date, spx_price, vix, put_short, put_long, put_credit, call_short, call_long, call_credit, cfg, trade_id):
+        super().__init__(ticker, entry_date, expiration_date, spx_price, vix, put_short, put_long, put_credit, call_short, call_long, call_credit, cfg, trade_id)
+        pass
 
     def _adjust_open_pnl(self, day_open, T, r, put_vol, call_vol,
                      current_put_pnl, put_pnl_high, put_pnl_low,

@@ -4,6 +4,9 @@ from config import gcfg
 
 class CallSpreadTrade(OneSidedSpreadTrade):
 
+    def __init__(self, ticker, entry_date, expiration_date, spx_price, vix, short_strike, long_strike, credit, cfg, trade_id):
+        super().__init__(ticker, entry_date, expiration_date, spx_price, vix, short_strike, long_strike, credit, cfg, trade_id)
+
     def option_type(self):
         return 'call'
 

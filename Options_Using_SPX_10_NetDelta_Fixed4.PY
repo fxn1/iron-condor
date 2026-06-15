@@ -22,7 +22,7 @@ from datetime import timedelta, datetime
 import pandas as pd
 from backtest_engine import run_main
 from data_loader import load_spx_daily_from_minute_files, load_vix_data_from_excel
-from base_strategy import BaseStrategy, get_next_friday, is_monday, TradeEntryReason, TradeSignal
+from base_strategy import BaseStrategy, get_next_friday,  TradeEntryReason, TradeSignal
 from volatility import calculate_historical_volatility
 from pricing import black_scholes_price, find_strike_for_delta
 from trade import IronCondorTrade
@@ -37,6 +37,7 @@ def log(msg=""):
 # ============================================================================
 
 
+SPX_TICKER='SPX'
 class Fixed4Strategy(BaseStrategy):
     """
     SPX Iron Condor — Net-Delta Roll Management, Fixed ×5 capital variant.
@@ -44,11 +45,10 @@ class Fixed4Strategy(BaseStrategy):
     """
 
     def __init__(self):
+        super().__init__()
         self.cfg = gcfg.spx
-        self.vix_data = {}
         self.spx_data = {}
         self.sorted_dates = []
-        self.used_expirations = set()
 
     # ── data injection (called by run_main after loading) ─────────────────
 
@@ -57,15 +57,13 @@ class Fixed4Strategy(BaseStrategy):
     # BaseStrategy — unified interface engine calls
     def load_data(self, start_date, delta_days):
         VIX_DATA_PATH = os.path.normpath(os.path.join(gcfg.paths.data_path, 'VIX_Daily_Data.xlsx'))
+        if not os.path.exists(VIX_DATA_PATH):
+            raise FileNotFoundError(VIX_DATA_PATH)
 
-        self.vix_data = None
-        if os.path.exists(VIX_DATA_PATH):
-            self.vix_data = load_vix_data_from_excel(VIX_DATA_PATH)
-            if self.vix_data:
-                log(f"  Loaded {len(self.vix_data)} days of VIX data")
+        self.vix_data = load_vix_data_from_excel(VIX_DATA_PATH)
         if self.vix_data is None:
-            log(f"  ERROR: VIX data not found {VIX_DATA_PATH}")
-            return
+            raise ValueError(f"Failed to load VIX data from {VIX_DATA_PATH}")
+        log(f"  Loaded {len(self.vix_data)} days of VIX data")
         log()
 
         log("  Loading SPX minute data...")
@@ -78,18 +76,23 @@ class Fixed4Strategy(BaseStrategy):
         log(f"  Built {len(self.spx_data)} daily SPX bars")
 
     def should_enter_trades(self, current_date) -> list[TradeSignal]:
-        return [self.should_enter_trade(current_date)]
+        if self.cfg.entry_weekday != "ALL":
+            weekday = current_date.strftime("%A").upper()
+            if weekday != self.cfg.entry_weekday.upper():
+                return [TradeSignal(reason=TradeEntryReason.NOT_WEEKDAY, ticker=SPX_TICKER)]
+        if 0 <= self.cfg.vix_no_trade < self._vix(current_date):
+            return [TradeSignal(reason=TradeEntryReason.SKIPPED_VIX, ticker=SPX_TICKER)]
+        if not self.check_expiration_used(current_date, SPX_TICKER):
+            return [TradeSignal(reason=TradeEntryReason.SHOULD_ENTER, ticker=SPX_TICKER)]
+        return [TradeSignal(reason=TradeEntryReason.SKIPPED_DUP_EXP, ticker=SPX_TICKER)]
 
     def should_reenter_after_exit(self, trade) -> TradeSignal:
         if trade.exited_at_profit_target and self._vix(trade.exit_date) <= self.cfg.vix_no_trade:
-            return TradeSignal(reason=TradeEntryReason.SHOULD_ENTER)
-        return TradeSignal(reason=TradeEntryReason.SKIPPED_VIX)
+            return TradeSignal(reason=TradeEntryReason.SHOULD_ENTER, ticker=SPX_TICKER)
+        return TradeSignal(reason=TradeEntryReason.SKIPPED_VIX, ticker=SPX_TICKER)
 
-    def mark_expiration_used(self, trade):
-        self.used_expirations.add(trade.expiration_date)
-
-    def mark_reentry_expiration_used(self, current_date):
-        self.used_expirations.add(self._exp_key(current_date))
+    def _exp_key(self, current_date, ticker):
+        return ticker, get_next_friday(current_date, self.cfg.target_dte)
 
     def create_trade(self, current_date, trade_id, signal: TradeSignal):
         bar        = self.spx_data.get(current_date, {})
@@ -113,6 +116,7 @@ class Fixed4Strategy(BaseStrategy):
         cl = black_scholes_price(spx_price, call_long,  T, gcfg.market.risk_free_rate, call_vol, 'call')
 
         return IronCondorTrade(
+            ticker= SPX_TICKER,
             entry_date=current_date,
             expiration_date=expiration,
             spx_price=spx_price,
@@ -123,7 +127,7 @@ class Fixed4Strategy(BaseStrategy):
             call_short=call_short,
             call_long=call_long,
             call_credit=cs - cl,
-            num_contracts=self.cfg.num_contracts,
+            cfg=self.cfg,
             trade_id=trade_id,
         )
 
@@ -164,14 +168,11 @@ class Fixed4Strategy(BaseStrategy):
         log("  " + "-" * 60)
         log(f"    Days in Warn band ({self.cfg.net_delta_warn}-{self.cfg.net_delta_roll}):     {results['days_in_warn']}")
         log(f"    Days in Roll zone (>{self.cfg.net_delta_roll}):       {results['days_in_roll_zone']}")
-        log(f"    Trades that rolled at least 1x:    {results['rolled_trades']}")
-        log(f"    Total PUT-side rolls:              {results['total_put_rolls']}")
-        log(f"    Total CALL-side rolls:             {results['total_call_rolls']}")
+        log(f"    Trades that rolled at least 1x: {results['rolled_trades']}")
+        log(f"    Total PUT-side rolls:           {results['total_put_rolls']}")
+        log(f"    Total CALL-side rolls:          {results['total_call_rolls']}")
         log(f"    Skipped (VIX > {self.cfg.vix_no_trade}):             {results['trades_skipped_vix']}")
         log()
-
-    def check_expiration_used(self, current_date) -> bool:
-        return self._exp_key(current_date) in self.used_expirations
 
     def fill_expiration_price(self, trade):
         """Look up SPX price at expiration for reporting.  Falls back to exit price."""
@@ -187,21 +188,6 @@ class Fixed4Strategy(BaseStrategy):
                 trade.spx_price_at_expiration = md['close']
                 return
         trade.spx_price_at_expiration = trade.spx_price_at_exit
-
-    def should_enter_trade(self, current_date) -> TradeSignal:
-        if not is_monday(current_date):
-            return TradeSignal(reason=TradeEntryReason.NOT_MONDAY)
-        if self._vix(current_date) > self.cfg.vix_no_trade:
-            return TradeSignal(reason=TradeEntryReason.SKIPPED_VIX)
-        if self.check_expiration_used(current_date):
-            return TradeSignal(reason=TradeEntryReason.SKIPPED_DUP_EXP)
-        return TradeSignal(reason=TradeEntryReason.SHOULD_ENTER)
-
-    def _vix(self, current_date):
-        return self.vix_data[current_date]['close'] if current_date in self.vix_data else 18.0
-
-    def _exp_key(self, current_date):
-        return get_next_friday(current_date, self.cfg.target_dte)
 
     def _volatility(self, ts: pd.Timestamp) -> float:
         if ts not in self.sorted_dates:

@@ -72,11 +72,21 @@ def print_results(cfg, results, title, years):
         log(f"    Total Return ({years:.0f} yrs):    {total_return*100:.1f}%")
     log()
 
+    from collections import Counter
+    days_held_counter = Counter()
+    days_list = []
+
+    log("")
     log("  YEARLY BREAKDOWN")
     log("  " + "-" * 60)
     by_year = {}
-    for t in results['closed_trades']:
-        by_year.setdefault(t.entry_date.year, []).append(t)
+    for trade in results['closed_trades']:
+        by_year.setdefault(trade.entry_date.year, []).append(trade)
+        if trade.exit_date and trade.entry_date:
+            days_held = (trade.exit_date - trade.entry_date).days
+            days_held_counter[days_held] += 1
+            days_list.append((trade.exit_date - trade.entry_date).days)
+
     log(f"    {'Year':<6} {'Trades':<8} {'Wins':<6} {'Win%':<8} {'Rolls':<8} {'P&L':<14} {'ROC':<10}")
     log(f"    {'-'*6} {'-'*8} {'-'*6} {'-'*8} {'-'*8} {'-'*14} {'-'*10}")
     for year in sorted(by_year):
@@ -91,12 +101,34 @@ def print_results(cfg, results, title, years):
         total_margin += ypnl  # assumes profits are reinvested year-over-year for ROC calculation
     log()
 
+    log("")
+    log("DAYS HELD DISTRIBUTION")
+    log("------------------------------------------------------------")
+    log(" Days   Trades   Pct")
+    log(" -----  -------  ------")
+    avg_days = sum(days_list) / len(days_list)
+    median_days = days_list[len(days_list) // 2]
+    total = sum(days_held_counter.values())
+    for days, count in sorted(
+            days_held_counter.items(),
+            key=lambda x: x[1],
+            reverse=True):
+        pct = 100.0 * count / total
+        log(f" {days:5d}  {count:7d}  {pct:5.1f}%")
+
+    days_list.sort()
+    avg_days = sum(days_list) / len(days_list)
+    median_days = days_list[len(days_list) // 2]
+    log("")
+    log(f"Avg Days Held:    {avg_days:.1f}")
+    log(f"Median Days Held: {median_days}")
+
 
 def export_trades_to_csv(results, filename):
     with open(filename, 'w', newline='') as f:
         w = csv.writer(f)
         w.writerow([
-            'Trade_ID', 'Entry_Date', 'Expiration', 'Exit_Date', 'DTE',
+            'Trade_ID', 'Ticker', 'Entry_Date', 'Expiration', 'Exit_Date', 'DTE',
             'SPX_Entry', 'SPX_Exit', 'SPX_Expiration', 'VIX_Entry',
             'PUT_Short_Final', 'PUT_Long_Final', 'PUT_Credit_Final', 'PUT_Rolls', 'PUT_Exit',
             'CALL_Short_Final', 'CALL_Long_Final', 'CALL_Credit_Final', 'CALL_Rolls', 'CALL_Exit',
@@ -115,6 +147,7 @@ def export_trades_to_csv(results, filename):
             ed = t.exit_date.strftime('%Y-%m-%d') if t.exit_date else ''
             w.writerow([
                 t.trade_id,
+                t.ticker,
                 t.entry_date.strftime('%Y-%m-%d'),
                 t.expiration_date.strftime('%Y-%m-%d'),
                 ed, dte,
@@ -122,15 +155,14 @@ def export_trades_to_csv(results, filename):
                 f"{spx_exit:.2f}",
                 f"{spx_exp:.2f}",
                 f"{t.vix_at_entry:.2f}",
-                t.put_short, t.put_long,
-                f"{t.put_credit:.2f}",
+                t.short_strike, t.long_strike,
+                f"{t.credit:.2f}",
                 len(t.put_rolls),
                 t.put_exit_reason or '',
                 t.call_short, t.call_long,
                 f"{t.call_credit:.2f}",
                 len(t.call_rolls),
                 t.call_exit_reason or '',
-                f"{credit_d:.2f}",
                 f"{banked_d:.2f}",
                 f"{pnl_d:.2f}",
                 f"{pnl_pct:.1f}",
