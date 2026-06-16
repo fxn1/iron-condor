@@ -1,11 +1,12 @@
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from datetime import timedelta
 from enum import Enum
+from typing import Optional
 
-from config import *
+import pandas as pd
 
-from pricing import black_scholes_price, find_strike_for_delta
 
-from trade import IronCondorTrade
 # ============================================================================
 # DATE HELPERS
 # ============================================================================
@@ -13,65 +14,103 @@ from trade import IronCondorTrade
 
 def get_next_friday(from_date, days_out=30):
     target = from_date + timedelta(days=days_out)
-    days_to_friday = (4 - target.weekday()) % 7
-    if days_to_friday == 0 and target.weekday() != 4:
-        days_to_friday = 7
+    days_to_friday = (4 - target.weekday()) % 7  # Roll to next Friday
     friday = target + timedelta(days=days_to_friday)
     if friday <= from_date:
         friday += timedelta(days=7)
     return friday
 
 
-# ============================================================================
-# TRADE CREATION
-# ============================================================================
-
-def create_new_trade(entry_date, spx_price, vix, volatility, trade_id):
-    expiration = get_next_friday(entry_date, TARGET_DTE)
-    dte = (expiration - entry_date).days
-    T = dte / 365.0
-    put_vol  = volatility * 1.10
-    call_vol = volatility * 0.95
-
-    put_short  = find_strike_for_delta(spx_price, PUT_DELTA,  T, RISK_FREE_RATE, put_vol,  'put')
-    put_long   = put_short - WING_WIDTH
-    call_short = find_strike_for_delta(spx_price, CALL_DELTA, T, RISK_FREE_RATE, call_vol, 'call')
-    call_long  = call_short + WING_WIDTH
-
-    ps = black_scholes_price(spx_price, put_short,  T, RISK_FREE_RATE, put_vol, 'put')
-    pl = black_scholes_price(spx_price, put_long,   T, RISK_FREE_RATE, put_vol, 'put')
-    put_credit  = ps - pl
-
-    cs = black_scholes_price(spx_price, call_short, T, RISK_FREE_RATE, call_vol, 'call')
-    cl = black_scholes_price(spx_price, call_long,  T, RISK_FREE_RATE, call_vol, 'call')
-    call_credit = cs - cl
-
-    return IronCondorTrade(
-        entry_date=entry_date,
-        expiration_date=expiration,
-        spx_price=spx_price,
-        vix=vix,
-        put_short=put_short, put_long=put_long, put_credit=put_credit,
-        call_short=call_short, call_long=call_long, call_credit=call_credit,
-        num_contracts=NUM_CONTRACTS,
-        trade_id=trade_id,
-    )
-
-
-def is_monday(d): return d.weekday() == 0
-
-
 class TradeEntryReason(Enum):
-    SHOULD_ENTER = "should_enter"
-    SKIPPED_VIX = "skipped_vix"
+    SHOULD_ENTER    = "should_enter"
+    SKIPPED_VIX     = "skipped_vix"
     SKIPPED_DUP_EXP = "skipped_dup_exp"
-    NOT_MONDAY = "not_monday"
+    NOT_WEEKDAY      = "not_weekday"
+    SKIPPED_LOW_STRIKE = "skipped_low_strike"
+    NO_SIGNAL       = "no_signal"       # generic — used by stock strategy
 
 
-class BaseStrategy:
+@dataclass
+class TradeSignal:
+    """Carries per-signal data from should_enter_trades to the engine.
+    SPX strategies leave ticker/strike as None — not needed.
+    Stock strategies populate both.
+    reason is always set.  ticker/strike only populated for SHOULD_ENTER signals."""
+    reason: TradeEntryReason
+    ticker: Optional[str] = None
+    strike: Optional[float] = None
 
-    def should_enter_trade(self, current_date, vix, exp_key, used_expirations):
+
+class BaseStrategy(ABC):
+
+    def __init__(self):
+        self.vix_data = None
+        self.used_expirations = set()
+
+    @abstractmethod
+    def load_data(self, start_date, delta_days):
+        pass  # no-op default
+
+    @abstractmethod
+    def should_enter_trades(self, current_date) -> list[TradeSignal]:
+        """Return a list of TradeSignal for each trade to enter today.
+        one entry per signal or skip reason.
+        Empty list means no entry.  SPX strategies return at most one item.
+        Engine counts skips from signal.reason; creates trades for SHOULD_ENTER."""
         raise NotImplementedError
 
-    def should_reenter_after_exit(self, trade, vix):
+    @abstractmethod
+    def should_reenter_after_exit(self, trade) -> TradeSignal:
         raise NotImplementedError
+
+    @abstractmethod
+    def _exp_key(self, current_date, ticker):
+        raise NotImplementedError
+
+    def mark_expiration_used(self, trade):
+        self.used_expirations.add((trade.ticker, trade.expiration_date))
+
+    def mark_reentry_expiration_used(self, current_date, ticker):
+        self.used_expirations.add(self._exp_key(current_date, ticker))
+
+    def check_expiration_used(self, current_date, ticker) -> bool:
+        return self._exp_key(current_date, ticker) in self.used_expirations
+
+    @abstractmethod
+    def create_trade(self, current_date, trade_id, signal: TradeSignal):
+        """Build and return a Trade from a TradeSignal.
+        Strategy owns price and vol lookup — engine passes nothing extra."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_market_data(self, trade, ts: pd.Timestamp) -> dict:
+        """Return market data needed by the engine for an open trade today.
+        Must include: close, high, low, open, vix, volatility, put_vol, call_vol"""
+        raise NotImplementedError
+
+    def get_trading_dates(self, start_date, end_date) -> list:
+        """Return sorted list of trading datetime for the backtest period.
+        Default: subclass must override or engine passes dates directly."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def print_strategy_config(self):
+        """Print strategy-specific config in the run banner."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def print_extra_results(self, results, years):
+        """Strategy-specific report section. Default: no-op."""
+        pass
+
+    @abstractmethod
+    def fill_expiration_price(self, trade):
+        """fixed4 need to fill expiration price."""
+        pass
+
+    def _vix(self, current_date):
+        if self.vix_data is None:
+            return 18.0
+        if current_date not in self.vix_data:
+            return 18.0
+        return self.vix_data[current_date]['close']

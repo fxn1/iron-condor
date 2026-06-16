@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "iron-condor-backtest"
+version = "0.1.0"
+description = "SPX iron condor and stock put-spread backtesting framework"
+requires-python = ">=3.11"
+
+dependencies = [
+    # ── core numerics ─────────────────────────────────────────────────────
+    "numpy>=1.26.4",        # array math, used in volatility.py + pricing.py
+    "scipy>=1.12",          # norm.cdf / norm.pdf in black_scholes_price/delta
+
+    # ── data handling ─────────────────────────────────────────────────────
+    "pandas>=2.2",          # DataFrames throughout; required by yfinance
+    "openpyxl>=3.1",        # reads spx_YYYY.xlsx and VIX_Daily_Data.xlsx
+
+    # ── market data download (cachebt + EarningsCache) ────────────────────
+    "yfinance>=0.2.40",     # yf.download(), yf.Ticker().get_earnings_dates()
+
+    # ── yfinance transitive deps (pinned to avoid silent breakage) ────────
+    "lxml>=5.2",
+
+    # ── technical indicators (pandas-ta) ─────────────────────────────────────
+    "pandas-ta-classic>=0.3.14b",
+
+    # ── HTTP requests (for earnings date fetching) ─────────────────────────────
+    "requests>=2.28.0",   # ← add this
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.4",            # linting + formatting
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]   # pycodestyle, pyflakes, isort
