@@ -28,12 +28,13 @@ class Trade(ABC):
     abstract methods and optionally override manage_position / roll_stats.
     """
 
-    def __init__(self, ticker, entry_date, expiration_date, spx_price, vix, cumulative_credit, cfg, trade_id):
+    def __init__(self, ticker, entry_date, expiration_date, spx_price, volume, vix, cumulative_credit, cfg, trade_id):
         self.ticker             = ticker
         self.trade_id           = trade_id
         self.entry_date         = entry_date
         self.expiration_date    = expiration_date
         self.spx_price_at_entry = spx_price
+        self.volume_at_entry    = volume
         self.vix_at_entry       = vix
         self.cfg                = cfg
 
@@ -120,12 +121,17 @@ class IronCondorTrade(Trade):
     """
 
     def __init__(self, ticker, entry_date, expiration_date, spx_price, vix, put_short, put_long, put_credit, call_short, call_long, call_credit, cfg, trade_id):
-        super().__init__(ticker, entry_date, expiration_date, spx_price, vix, cumulative_credit = put_credit + call_credit, cfg = cfg, trade_id = trade_id,)
+        super().__init__(ticker, entry_date, expiration_date, spx_price, 0, vix, cumulative_credit=put_credit + call_credit, cfg=cfg, trade_id=trade_id, )
 
         # Current put spread
         self.put_short = put_short
         self.put_long  = put_long
         self.put_credit = put_credit
+
+        # TODO: to make export happy
+        self.short_strike = put_short
+        self.long_strike = put_long
+        self.credit = put_credit
 
         # Current call spread
         self.call_short = call_short
@@ -186,6 +192,11 @@ class IronCondorTrade(Trade):
         self.put_credit = new_credit
         self.put_leg_pnl = 0.0
         self.cumulative_credit += new_credit
+
+        # TODO: to make export happy
+        self.short_strike = new_short
+        self.long_strike = new_long
+        self.credit = new_credit
         return True
 
     def roll_call_side(self, current_date, spx_price, T, r, call_vol):

@@ -94,7 +94,6 @@ def print_results(cfg, results, title, years):
     log()
 
 
-
 def export_trades_to_csv(results, filename):
     with open(filename, 'w', newline='') as f:
         w = csv.writer(f)
@@ -103,13 +102,14 @@ def export_trades_to_csv(results, filename):
             'SPX_Entry', 'SPX_Exit', 'SPX_Expiration', 'VIX_Entry',
             'PUT_Short_Final', 'PUT_Long_Final', 'PUT_Credit_Final', 'PUT_Rolls', 'PUT_Exit',
             'CALL_Short_Final', 'CALL_Long_Final', 'CALL_Credit_Final', 'CALL_Rolls', 'CALL_Exit',
-            'Banked_Roll_PnL_$', 'Total_PnL_$', 'PnL_%',
+            'Cumulative_Credit_$', 'Banked_Roll_PnL_$', 'Total_PnL_$', 'PnL_%',
             'Exit_Reason', 'Result'
         ])
         for t in results['closed_trades']:
             dte = (t.expiration_date - t.entry_date).days
             res = 'WIN' if t.pnl > 0 else 'LOSS' if t.pnl < 0 else 'BE'
             pnl_d   = t.pnl * 100 * results['num_contracts']
+            credit_d = t.cumulative_credit * 100 * results['num_contracts']
             banked_d = t.banked_pnl * 100 * results['num_contracts']
             pnl_pct = (t.pnl / t.cumulative_credit * 100) if t.cumulative_credit else 0
             spx_exit = t.spx_price_at_exit or 0
@@ -133,6 +133,7 @@ def export_trades_to_csv(results, filename):
                 f"{t.call_credit:.2f}",
                 len(t.call_rolls),
                 t.call_exit_reason or '',
+                f"{credit_d:.2f}",
                 f"{banked_d:.2f}",
                 f"{pnl_d:.2f}",
                 f"{pnl_pct:.1f}",

@@ -45,10 +45,6 @@ class StockPutSpreadStrategy(BaseStrategy):
 
     # ── BaseStrategy: ───────────────────
 
-    def _price(self, ticker, ts: pd.Timestamp) -> float:
-        df = self.price_data[ticker]
-        return float(df.loc[ts, 'Close']) if ts in df.index else 0.0
-
     def _volatility(self, ticker, ts: pd.Timestamp) -> float:
         dates = self.sorted_dates.get(ticker, [])
         if ts not in dates:
@@ -136,14 +132,13 @@ class StockPutSpreadStrategy(BaseStrategy):
         Called by backtest_engine_stocks.py after scan_all_tickers() signals.
         """
         ticker = signal.ticker
-        price = self._price(ticker, current_date)
         volatility = self._volatility(ticker, current_date)
         expiration = get_next_friday(current_date, self.cfg.target_dte)
         return create_put_spread_from_scan(
             ticker            = ticker,
             entry_date        = current_date,
             expiration_date   = expiration,
-            spx_price         = price,
+            spx_price_df      = self.price_data[ticker],
             vix               = 0.0,           # not used in PutSpreadTrade
             short_strike      = signal.strike,
             volatility        = volatility,

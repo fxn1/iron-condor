@@ -19,8 +19,10 @@ class OneSidedSpreadTrade(Trade):
         - expiration_pnl()
     """
 
-    def __init__(self, ticker, entry_date, expiration_date, price, vix, short_strike, long_strike, credit, cfg, trade_id):
-        super().__init__(ticker, entry_date, expiration_date, price, vix, credit, cfg, trade_id)
+    def __init__(self, ticker, entry_date, expiration_date, spx_price_df, vix, short_strike, long_strike, credit, cfg, trade_id):
+        price = float(spx_price_df.loc[entry_date, 'Close']) if entry_date in spx_price_df.index else 0.0
+        volume = int(spx_price_df.loc[entry_date, 'Volume']) if entry_date in spx_price_df.index else 0
+        super().__init__(ticker, entry_date, expiration_date, price, volume, vix, credit, cfg, trade_id)
 
         self.short_strike = short_strike
         self.long_strike = long_strike

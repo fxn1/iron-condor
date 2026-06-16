@@ -140,7 +140,7 @@ def run_backtest(start_date, delta_days, strategy, run_title):
                 trade_id += 1
                 new_trade = strategy.create_trade(current_date, trade_id, signal)
 
-                if new_trade.credit < strategy.cfg.min_credit:
+                if 0 <= strategy.cfg.min_credit and new_trade.credit < strategy.cfg.min_credit:
                     skipped_low_credit += 1
                     continue
 
@@ -263,8 +263,6 @@ def run_main(*, strategy, title, script_name, csv_filename, start_date, end_date
     strategy.print_extra_results(results, years)  # ← stock sections; no-op for SPX
     print_results(strategy.cfg, results, title, years)
 
-    csv_path = os.path.join(gcfg.paths.output_path, csv_filename)
-    export_trades_to_csv(results, csv_path)
     log()
     # TODO: move below to reporting, and make it more generic (not SPX-specific) by passing in the wing width or other relevant parameters via results or strategy.
     if not results['closed_trades']:
@@ -301,3 +299,5 @@ def run_main(*, strategy, title, script_name, csv_filename, start_date, end_date
     log(f"  |{'TOTAL ROLLS (PUT/CALL):':^30}{'{}/{}'.format(results['total_put_rolls'], results['total_call_rolls']):^30}|")
     log(f"  +{'-'*60}+")
     log()
+    csv_path = os.path.join(gcfg.paths.output_path, csv_filename)
+    export_trades_to_csv(results, csv_path)

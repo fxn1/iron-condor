@@ -5,8 +5,8 @@ from config import gcfg
 
 class PutSpreadTrade(OneSidedSpreadTrade):
 
-    def __init__(self, ticker, entry_date, expiration_date, spx_price, vix, short_strike, long_strike, credit, cfg, trade_id):
-        super().__init__(ticker, entry_date, expiration_date, spx_price, vix, short_strike, long_strike, credit, cfg, trade_id)
+    def __init__(self, ticker, entry_date, expiration_date, spx_price_df, vix, short_strike, long_strike, credit, cfg, trade_id):
+        super().__init__(ticker, entry_date, expiration_date, spx_price_df, vix, short_strike, long_strike, credit, cfg, trade_id)
 
     def option_type(self):
         return 'put'
@@ -32,7 +32,7 @@ class PutSpreadTrade(OneSidedSpreadTrade):
         return self.credit
 
 
-def create_put_spread_from_scan(ticker, entry_date, expiration_date, spx_price, vix, short_strike, volatility, trade_id, cfg):
+def create_put_spread_from_scan(ticker, entry_date, expiration_date, spx_price_df, vix, short_strike, volatility, trade_id, cfg):
     """
     Construct a PutSpreadTrade from scanner output.
     short_strike comes from scanner.scan(); long_strike derived here.
@@ -43,6 +43,7 @@ def create_put_spread_from_scan(ticker, entry_date, expiration_date, spx_price, 
     vol = volatility * 1.10   # matches IC put vol convention
 
     # print(f"create_put_spread_from_scan: spx_price={spx_price}, short_strike={short_strike}, long_strike={long_strike}. wing_width={wing_width}, T={T:.4f}, dte={dte}, r={gcfg.market.risk_free_rate:.4f}, sigma={vol:.4f}, put")
+    spx_price = float(spx_price_df.loc[entry_date, 'Close']) if entry_date in spx_price_df.index else 0.0
     ps = black_scholes_price(spx_price, short_strike, T, gcfg.market.risk_free_rate, vol, 'put')
     pl = black_scholes_price(spx_price, long_strike,  T, gcfg.market.risk_free_rate, vol, 'put')
     credit = ps - pl
@@ -51,7 +52,7 @@ def create_put_spread_from_scan(ticker, entry_date, expiration_date, spx_price, 
         ticker=ticker,
         entry_date=entry_date,
         expiration_date=expiration_date,
-        spx_price=spx_price,
+        spx_price_df=spx_price_df,
         vix=vix,
         short_strike=short_strike,
         long_strike=long_strike,
