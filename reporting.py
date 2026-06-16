@@ -72,20 +72,12 @@ def print_results(cfg, results, title, years):
         log(f"    Total Return ({years:.0f} yrs):    {total_return*100:.1f}%")
     log()
 
-    from collections import Counter
-    days_held_counter = Counter()
-    days_list = []
-
     log("")
     log("  YEARLY BREAKDOWN")
     log("  " + "-" * 60)
     by_year = {}
     for trade in results['closed_trades']:
         by_year.setdefault(trade.entry_date.year, []).append(trade)
-        if trade.exit_date and trade.entry_date:
-            days_held = (trade.exit_date - trade.entry_date).days
-            days_held_counter[days_held] += 1
-            days_list.append((trade.exit_date - trade.entry_date).days)
 
     log(f"    {'Year':<6} {'Trades':<8} {'Wins':<6} {'Win%':<8} {'Rolls':<8} {'P&L':<14} {'ROC':<10}")
     log(f"    {'-'*6} {'-'*8} {'-'*6} {'-'*8} {'-'*8} {'-'*14} {'-'*10}")
@@ -101,27 +93,6 @@ def print_results(cfg, results, title, years):
         total_margin += ypnl  # assumes profits are reinvested year-over-year for ROC calculation
     log()
 
-    log("")
-    log("DAYS HELD DISTRIBUTION")
-    log("------------------------------------------------------------")
-    log(" Days   Trades   Pct")
-    log(" -----  -------  ------")
-    avg_days = sum(days_list) / len(days_list)
-    median_days = days_list[len(days_list) // 2]
-    total = sum(days_held_counter.values())
-    for days, count in sorted(
-            days_held_counter.items(),
-            key=lambda x: x[1],
-            reverse=True):
-        pct = 100.0 * count / total
-        log(f" {days:5d}  {count:7d}  {pct:5.1f}%")
-
-    days_list.sort()
-    avg_days = sum(days_list) / len(days_list)
-    median_days = days_list[len(days_list) // 2]
-    log("")
-    log(f"Avg Days Held:    {avg_days:.1f}")
-    log(f"Median Days Held: {median_days}")
 
 
 def export_trades_to_csv(results, filename):
@@ -132,14 +103,13 @@ def export_trades_to_csv(results, filename):
             'SPX_Entry', 'SPX_Exit', 'SPX_Expiration', 'VIX_Entry',
             'PUT_Short_Final', 'PUT_Long_Final', 'PUT_Credit_Final', 'PUT_Rolls', 'PUT_Exit',
             'CALL_Short_Final', 'CALL_Long_Final', 'CALL_Credit_Final', 'CALL_Rolls', 'CALL_Exit',
-            'Cumulative_Credit_$', 'Banked_Roll_PnL_$', 'Total_PnL_$', 'PnL_%',
+            'Banked_Roll_PnL_$', 'Total_PnL_$', 'PnL_%',
             'Exit_Reason', 'Result'
         ])
         for t in results['closed_trades']:
             dte = (t.expiration_date - t.entry_date).days
             res = 'WIN' if t.pnl > 0 else 'LOSS' if t.pnl < 0 else 'BE'
             pnl_d   = t.pnl * 100 * results['num_contracts']
-            credit_d = t.cumulative_credit * 100 * results['num_contracts']
             banked_d = t.banked_pnl * 100 * results['num_contracts']
             pnl_pct = (t.pnl / t.cumulative_credit * 100) if t.cumulative_credit else 0
             spx_exit = t.spx_price_at_exit or 0
@@ -176,6 +146,7 @@ def export_trades_to_csv(results, filename):
 # ============================================================================
 
 
+# TODO: move to analyze_trades
 def print_stock_results(results):
     """Stock put spread report — calls all 4 stock-specific sections."""
     _print_ticker_pnl(results)

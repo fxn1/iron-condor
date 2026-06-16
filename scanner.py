@@ -14,7 +14,7 @@ from typing import Optional
 
 import pandas as pd
 import pandas_ta_classic as ta
-from config import gcfg
+
 
 # ============================================================================
 # INDICATOR HELPERS
@@ -87,10 +87,6 @@ def _nearest_strike_below(price: float, increment: float) -> float:
 # ============================================================================
 
 
-# TODO: debug trade
-DEBUG_SCAN_COUNT = 0
-
-
 def scan(current_date: datetime, price_df: pd.DataFrame, earnings_dates: list[date], scanner_cfg) -> tuple[bool, Optional[float]]:
     """
     Decide whether to enter a put spread on ticker today.
@@ -123,11 +119,6 @@ def scan(current_date: datetime, price_df: pd.DataFrame, earnings_dates: list[da
     close = history['Close']
     current_price = float(close.iloc[-1])
 
-    # TODO: debug trade
-    global DEBUG_SCAN_COUNT
-    DEBUG_SCAN_COUNT += 1
-    debug = DEBUG_SCAN_COUNT <= gcfg.stocks.debug_trade_id
-
     # ── gate 2: EMA(20) trending up ──────────────────────────────────────
     if not _ema_trending_up(close, scanner_cfg):
         return False, None
@@ -149,16 +140,6 @@ def scan(current_date: datetime, price_df: pd.DataFrame, earnings_dates: list[da
     strike = _nearest_strike_below(support, scanner_cfg.strike_increment)
     if strike <= 0:
         return False, None
-    # TODO: debug trade
-    if debug:
-        distance_pct = (current_price - strike) / current_price * 100
-        print(
-            f"SCAN {DEBUG_SCAN_COUNT}: "
-            f"price={current_price:.2f} "
-            f"support={support:.2f} "
-            f"strike={strike:.2f} "
-            f"OTM={distance_pct:.1f}%"
-        )
     return True, strike
 
 

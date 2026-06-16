@@ -62,16 +62,6 @@ class OneSidedSpreadTrade(Trade):
     def _spread_value(self, S, T, r, vol):
         short_price = black_scholes_price(S, self.short_strike, T, r, vol, self.option_type())
         long_price = black_scholes_price(S, self.long_strike, T, r, vol, self.option_type())
-        # TODO: debug trade
-        if self.trade_id <= gcfg.stocks.debug_trade_id:
-            print(
-                f"VAL id={self.trade_id} "
-                f"S={S:.2f} "
-                f"vol={vol:.3f} "
-                f"short={short_price:.4f} "
-                f"long={long_price:.4f} "
-                f"spread={short_price - long_price:.4f}"
-            )
         return short_price - long_price
 
     def _spread_pnl(self, S, T, r, vol):
@@ -90,15 +80,6 @@ class OneSidedSpreadTrade(Trade):
     # ============================================================
 
     def _close_trade(self, pnl, reason, current_date, price):
-        # TODO: debug trade
-        if self.trade_id <= gcfg.stocks.debug_trade_id:
-            print(
-                f"CLOSE {self.trade_id} "
-                f"reason={reason} "
-                f"days={(current_date - self.entry_date).days} "
-                f"credit={self.credit:.4f} "
-                f"pnl={pnl:.4f}"
-            )
         self.leg_open = False
         self.leg_pnl = pnl
         self.is_open = False
@@ -142,28 +123,7 @@ class OneSidedSpreadTrade(Trade):
             self._close_trade(min(pnl_high, pnl_low), "Stop Loss", current_date, price)
             return True
 
-        # TODO: debug trade
-        if self.trade_id <= gcfg.stocks.debug_trade_id:
-            print(
-                f"EXITCHK id={self.trade_id} "
-                f"dte={dte} "
-                f"entry_credit={self.credit:.4f} "
-                f"spread_value={self._spread_value(price, T, r, vol):.4f} "
-                f"pnl_close={pnl_close:.4f} "
-                f"target={self.profit_target_amount:.4f}"
-                f"credit={self.credit:.4f} "
-                f"target={self.profit_target_amount:.4f} "
-            )
         if profit_target_hit:
-            # TODO: debug trades
-            if self.trade_id <= gcfg.stocks.debug_trade_id:
-                print(
-                    f"EXIT PROFIT "
-                    f"id={self.trade_id} "
-                    f"target={self.profit_target_amount:.4f} "
-                    f"pnl_close={pnl_close:.4f} "
-                    f"credit={self.credit:.4f}"
-                )
             self._close_trade(pnl_close, "Profit Target", current_date, price)
             self.exited_at_profit_target = True
             return True

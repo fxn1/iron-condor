@@ -68,6 +68,7 @@ def run_backtest(start_date, delta_days, strategy, run_title):
     trades_entered        = 0
     trades_skipped_vix    = 0
     skipped_duplicate_exp = 0
+    skipped_low_credit    = 0
     profit_target_exits   = 0
     reentry_trades        = 0
     total_put_rolls       = 0
@@ -138,6 +139,11 @@ def run_backtest(start_date, delta_days, strategy, run_title):
             if signal.reason == TradeEntryReason.SHOULD_ENTER:
                 trade_id += 1
                 new_trade = strategy.create_trade(current_date, trade_id, signal)
+
+                if new_trade.credit < strategy.cfg.min_credit:
+                    skipped_low_credit += 1
+                    continue
+
                 open_trades.append(new_trade)
                 strategy.mark_expiration_used(new_trade)
                 trades_entered += 1
@@ -186,13 +192,13 @@ def run_backtest(start_date, delta_days, strategy, run_title):
     avg_loss = gl / losing if losing else 0
     win_rate = winning / n * 100 if n else 0
     pf = abs(gp / gl) if gl else float('inf')
-    skips = {'skipped_vix': trades_skipped_vix, 'skipped_dup_exp': skipped_duplicate_exp}
     log("  Complete!\n")
     return {
         'total_trades':         n,
         'trades_entered':       trades_entered,
-        'trades_skipped_vix':    skips['skipped_vix'],
-        'skipped_duplicate_exp': skips['skipped_dup_exp'],
+        'trades_skipped_vix':    trades_skipped_vix,
+        'skipped_duplicate_exp': skipped_duplicate_exp,
+        'skipped_low_credit':    skipped_low_credit,
         'profit_target_exits':  profit_target_exits,
         'reentry_trades':       reentry_trades,
         'winning_trades':       winning,

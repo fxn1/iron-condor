@@ -47,19 +47,6 @@ def create_put_spread_from_scan(ticker, entry_date, expiration_date, spx_price, 
     pl = black_scholes_price(spx_price, long_strike,  T, gcfg.market.risk_free_rate, vol, 'put')
     credit = ps - pl
 
-    # TODO: debug trades
-    if trade_id <= gcfg.stocks.debug_trade_id:
-        print(
-            f"TRADE {trade_id} "
-            f"{ticker} "
-            f"S={spx_price:.2f} "
-            f"short={short_strike:.2f} "
-            f"long={long_strike:.2f} "
-            f"vol={vol:.3f} "
-            f"credit={credit:.4f} "
-            f"profit_target={credit * cfg.profit_target:.4f}"
-        )
-
     return PutSpreadTrade(
         ticker=ticker,
         entry_date=entry_date,

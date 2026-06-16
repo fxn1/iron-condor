@@ -181,9 +181,7 @@ class StockPutSpreadStrategy(BaseStrategy):
         log(f"  Capital:      ")
 
     def print_extra_results(self, results, years):
-        # TODO: pass strategy to reporting and call this
-        from reporting import print_stock_results
-        print_stock_results(results)
+        pass
 
     def fill_expiration_price(self, trade):
         pass
