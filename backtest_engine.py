@@ -278,7 +278,7 @@ def run_main(*, strategy, title, script_name, csv_filename, start_date, end_date
     avg_credit = sum(t.cumulative_credit for t in results['closed_trades']) / len(results['closed_trades'])
     margin = (strategy.cfg.wing_width - avg_credit) * 100 * results['max_concurrent']  # peak concurrent open trades, not total trades
     annual_pnl = results['total_pnl_dollars'] / years
-    total_return = results['total_pnl_dollars'] / margin
+    total_return = results['total_pnl_dollars']/margin
     roc = ((1 + total_return) ** (1 / years) - 1) * 100 if margin and years > 0 else 0
 
     log("=" * 80)
@@ -291,7 +291,7 @@ def run_main(*, strategy, title, script_name, csv_filename, start_date, end_date
         log(line)
     log(f"  |{'TOTAL P&L :':^30}{'${:,.0f}'.format(results['total_pnl_dollars']):^30}|")
     if margin:
-        log(f"  |{'TOTAL RETURN:':^30}{'{:.0f}%'.format(results['total_pnl_dollars']/margin*100):^30}|")
+        log(f"  |{'TOTAL RETURN ({:.0f} yrs):'.format(years):^30}{'{:.1f}%'.format(total_return*100):^30}|")
     log(f"  |{'ANNUAL P&L:':^30}{'${:,.0f}'.format(annual_pnl):^30}|")
     log(f"  |{'ANNUAL ROC:':^30}{'{:.1f}%'.format(roc):^30}|")
     log(f"  |{'WIN RATE:':^30}{'{:.1f}%'.format(results['win_rate']):^30}|")
