@@ -438,4 +438,34 @@ MPWR         7    100.00     378.71    20.64        1.68      7.14
 APP          8     87.50     384.58    29.98        1.19      1.43
 FICO         8    100.00     466.54    13.84        1.71      1.62
 
+── VOLUME ANALYSIS (10d Median at Entry) ───────────────────────
+  Avg volume     : 4,216,079
+  Median volume  : 1,531,150
+  Min volume     : 14,850
+  Max volume     : 683,399,000
+  % under 100K   : 0.6%
+  % under 500K   : 13.2%
+  % under 1M     : 33.0%
+  % under 10M    : 94.6%
+  % over 10M     : 5.4%
+
+  Volume bucket distribution:
+            Trades  Win_Rate  Avg_PnL  Avg_OTM  Avg_Credit
+Vol_Bucket
+<100K            6    100.00    47.59    10.10        1.11
+100K-500K      121     94.21    29.71    12.44        1.27
+500K-1M        190     95.79    26.59    12.78        1.23
+1M-5M          507     95.46    27.88    13.85        1.13
+5M-10M          84     94.05    22.76    16.04        0.99
+>10M            52     96.15    30.29    18.34        1.11
+
+  Avg loss by volume bucket (losing trades only):
+            Trades  Avg_Loss  Max_Loss
+Vol_Bucket
+100K-500K        7   -146.51   -268.37
+500K-1M          8   -255.46   -422.69
+1M-5M           23   -207.15   -649.73
+5M-10M           5   -147.75   -240.91
+>10M             2   -176.18   -231.64
+
 Process finished with exit code 0

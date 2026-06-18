@@ -28,13 +28,13 @@ class Trade(ABC):
     abstract methods and optionally override manage_position / roll_stats.
     """
 
-    def __init__(self, ticker, entry_date, expiration_date, spx_price, volume, vix, cumulative_credit, cfg, trade_id):
+    def __init__(self, ticker, entry_date, expiration_date, spx_price, volume_10med, vix, cumulative_credit, cfg, trade_id):
         self.ticker             = ticker
         self.trade_id           = trade_id
         self.entry_date         = entry_date
         self.expiration_date    = expiration_date
         self.spx_price_at_entry = spx_price
-        self.volume_at_entry    = volume
+        self.volume_10med_at_entry    = volume_10med
         self.vix_at_entry       = vix
         self.cfg                = cfg
 

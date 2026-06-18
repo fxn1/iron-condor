@@ -16,7 +16,7 @@ from datetime import datetime, timedelta
 from config import gcfg
 from base_strategy import TradeEntryReason
 from reporting import print_results, export_trades_to_csv
-
+from analyze_trades import all_analysis
 
 def log(msg=""):
     print(f"{datetime.now()}  {msg}")
@@ -301,3 +301,4 @@ def run_main(*, strategy, title, script_name, csv_filename, start_date, end_date
     log()
     csv_path = os.path.join(gcfg.paths.output_path, csv_filename)
     export_trades_to_csv(results, csv_path)
+    all_analysis(results)

@@ -21,8 +21,9 @@ class OneSidedSpreadTrade(Trade):
 
     def __init__(self, ticker, entry_date, expiration_date, spx_price_df, vix, short_strike, long_strike, credit, cfg, trade_id):
         price = float(spx_price_df.loc[entry_date, 'Close']) if entry_date in spx_price_df.index else 0.0
-        volume = int(spx_price_df.loc[entry_date, 'Volume']) if entry_date in spx_price_df.index else 0
-        super().__init__(ticker, entry_date, expiration_date, price, volume, vix, credit, cfg, trade_id)
+        hist10 = spx_price_df[spx_price_df.index <= entry_date].tail(10)
+        volume_10med = int(hist10['Volume'].median()) if len(hist10) >= 10 else 0
+        super().__init__(ticker, entry_date, expiration_date, price, volume_10med, vix, credit, cfg, trade_id)
 
         self.short_strike = short_strike
         self.long_strike = long_strike

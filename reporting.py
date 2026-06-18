@@ -93,7 +93,7 @@ def export_trades_to_csv(results, filename):
         w = csv.writer(f)
         w.writerow([
             'Trade_ID', 'Ticker', 'Entry_Date', 'Expiration', 'Exit_Date', 'DTE',
-            'SPX_Entry', 'SPX_Exit', 'SPX_Expiration', 'Volume', 'VIX_Entry',
+            'SPX_Entry', 'SPX_Exit', 'SPX_Expiration', 'Volume_Entry', 'VIX_Entry',
             'PUT_Short_Final', 'PUT_Long_Final', 'PUT_Credit_Final', 'PUT_Rolls', 'PUT_Exit',
             'CALL_Short_Final', 'CALL_Long_Final', 'CALL_Credit_Final', 'CALL_Rolls', 'CALL_Exit',
             'Cumulative_Credit_$', 'Banked_Roll_PnL_$', 'Total_PnL_$', 'PnL_%',
@@ -118,7 +118,7 @@ def export_trades_to_csv(results, filename):
                 f"{t.spx_price_at_entry:.2f}",
                 f"{spx_exit:.2f}",
                 f"{spx_exp:.2f}",
-                f"{t.volume_at_entry:.2f}",
+                f"{t.volume_10med_at_entry:.2f}",
                 f"{t.vix_at_entry:.2f}",
                 t.short_strike, t.long_strike,
                 f"{t.credit:.2f}",

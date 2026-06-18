@@ -21,6 +21,7 @@ def load(path: str) -> pd.DataFrame:
     df['Credit']     = df['PUT_Credit_Final'].astype(float)
     df['Short']      = df['PUT_Short_Final'].astype(float)
     df['OTM_Pct']    = (df['SPX_Entry'].astype(float) - df['Short']) / df['SPX_Entry'].astype(float) * 100
+    df['Is_Win']     = df['Result'] == 'WIN'                                          # ← add this
     return df
 
 
@@ -34,7 +35,7 @@ def otm_analysis(df: pd.DataFrame):
     print(f"  Max OTM%    : {df['OTM_Pct'].max():.1f}%")
 
     bins   = [0, 5, 10, 15, 20, 25, 30, 100]
-    labels = ['0-5%','5-10%','10-15%','15-20%','20-25%','25-30%','>30%']
+    labels = ['0-5%', '5-10%', '10-15%', '15-20%', '20-25%', '25-30%', '>30%']
     df['OTM_Bucket'] = pd.cut(df['OTM_Pct'], bins=bins, labels=labels)
     dist = df.groupby('OTM_Bucket', observed=True).agg(
         Trades   = ('Trade_ID', 'count'),
@@ -55,7 +56,7 @@ def hold_time_analysis(df: pd.DataFrame):
     print(f"  % held > 10d   : {(df['Hold_Days'] > 10).mean()*100:.1f}%")
 
     bins   = [0, 1, 3, 5, 10, 20, 40, 200]
-    labels = ['1d','2-3d','4-5d','6-10d','11-20d','21-40d','>40d']
+    labels = ['1d', '2-3d', '4-5d', '6-10d', '11-20d', '21-40d', '>40d']
     df['Hold_Bucket'] = pd.cut(df['Hold_Days'], bins=bins, labels=labels)
     dist = df.groupby('Hold_Bucket', observed=True).agg(
         Trades   = ('Trade_ID', 'count'),
@@ -76,7 +77,7 @@ def credit_analysis(df: pd.DataFrame):
     print(f"  % credit < $0.50 : {(df['Credit'] < 0.50).mean()*100:.1f}%")
 
     bins   = [0, 0.10, 0.25, 0.50, 1.0, 2.0, 5.0, 999]
-    labels = ['<0.10','0.10-0.25','0.25-0.50','0.50-1.00','1.00-2.00','2.00-5.00','>5.00']
+    labels = ['<0.10', '0.10-0.25', '0.25-0.50', '0.50-1.00', '1.00-2.00', '2.00-5.00', '>5.00']
     df['Credit_Bucket'] = pd.cut(df['Credit'], bins=bins, labels=labels)
     dist = df.groupby('Credit_Bucket', observed=True).agg(
         Trades   = ('Trade_ID', 'count'),
@@ -114,15 +115,15 @@ def exit_reason_analysis(df: pd.DataFrame):
 
 def worst_trades(df: pd.DataFrame, n=10):
     print(f"\n── TOP {n} WORST TRADES ─────────────────────────────────────────")
-    cols = ['Trade_ID','Ticker','Entry_Date','Exit_Date','Hold_Days',
-            'SPX_Entry','Short','OTM_Pct','Credit','Total_PnL_$','Exit_Reason']
+    cols = ['Trade_ID', 'Ticker', 'Entry_Date', 'Exit_Date', 'Hold_Days',
+            'SPX_Entry', 'Short', 'OTM_Pct', 'Credit', 'Total_PnL_$', 'Exit_Reason']
     print(df.nsmallest(n, 'Total_PnL_$')[cols].to_string(index=False))
 
 
 def best_trades(df: pd.DataFrame, n=10):
     print(f"\n── TOP {n} BEST TRADES ──────────────────────────────────────────")
-    cols = ['Trade_ID','Ticker','Entry_Date','Exit_Date','Hold_Days',
-            'SPX_Entry','Short','OTM_Pct','Credit','Total_PnL_$','Exit_Reason']
+    cols = ['Trade_ID', 'Ticker', 'Entry_Date', 'Exit_Date', 'Hold_Days',
+            'SPX_Entry', 'Short', 'OTM_Pct', 'Credit', 'Total_PnL_$', 'Exit_Reason']
     print(df.nlargest(n, 'Total_PnL_$')[cols].to_string(index=False))
 
 
@@ -139,14 +140,47 @@ def ticker_summary(df: pd.DataFrame):
     print(t.to_string())
 
 
-# ── main ─────────────────────────────────────────────────────────────────────
+def volume_analysis(df: pd.DataFrame):
+    print("\n── VOLUME ANALYSIS (10d Median at Entry) ───────────────────────")
+    volume_col = 'Volume_Entry'
+    if volume_col not in df.columns or df[volume_col].isna().all():
+        print("  ⚠  Volume_Entry column missing — rerun backtest to populate.")
+        return
 
-def main():
-    path = sys.argv[1] if len(sys.argv) > 1 else "outputs/Stock_Put_Spread_Backtest.csv"
-    print(f"Loading: {path}")
-    df = load(path)
-    print(f"Loaded {len(df)} trades  ({df['Year'].min()}–{df['Year'].max()})")
+    print(f"  Avg volume     : {df[volume_col].mean():,.0f}")
+    print(f"  Median volume  : {df[volume_col].median():,.0f}")
+    print(f"  Min volume     : {df[volume_col].min():,.0f}")
+    print(f"  Max volume     : {df[volume_col].max():,.0f}")
+    print(f"  % under 100K   : {(df[volume_col] < 100_000).mean() * 100:.1f}%")
+    print(f"  % under 500K   : {(df[volume_col] < 500_000).mean() * 100:.1f}%")
+    print(f"  % under 1M     : {(df[volume_col] < 1_000_000).mean() * 100:.1f}%")
+    print(f"  % under 10M    : {(df[volume_col] < 10_000_000).mean() * 100:.1f}%")
+    print(f"  % over 10M     : {(df[volume_col] > 10_000_000).mean() * 100:.1f}%")
 
+    bins = [0, 100_000, 500_000, 1_000_000, 5_000_000, 10_000_000, float('inf')]
+    labels = ['<100K', '100K-500K', '500K-1M', '1M-5M', '5M-10M', '>10M']
+    df['Vol_Bucket'] = pd.cut(df[volume_col], bins=bins, labels=labels)
+    dist = df.groupby('Vol_Bucket', observed=True).agg(
+        Trades=('Trade_ID', 'count'),
+        Win_Rate=('Is_Win', lambda x: x.mean() * 100),
+        Avg_PnL=('Total_PnL_$', 'mean'),
+        Avg_OTM=('OTM_Pct', 'mean'),
+        Avg_Credit=('Credit', 'mean'),
+    ).round(2)
+    print("\n  Volume bucket distribution:")
+    print(dist.to_string())
+
+    # worst trades by volume bucket
+    print("\n  Avg loss by volume bucket (losing trades only):")
+    losses = df[~df['Is_Win']].groupby('Vol_Bucket', observed=True).agg(
+        Trades=('Trade_ID', 'count'),
+        Avg_Loss=('Total_PnL_$', 'mean'),
+        Max_Loss=('Total_PnL_$', 'min'),
+    ).round(2)
+    print(losses.to_string())
+
+
+def all_analysis(df):
     otm_analysis(df)
     hold_time_analysis(df)
     credit_analysis(df)
@@ -155,6 +189,18 @@ def main():
     worst_trades(df)
     best_trades(df)
     ticker_summary(df)
+    volume_analysis(df)
+
+
+# ── main ─────────────────────────────────────────────────────────────────────
+
+def main():
+    path = sys.argv[1] if len(sys.argv) > 1 else "outputs/Stock_Put_Spread_Backtest.csv"
+    print(f"Loading: {path}")
+    df = load(path)
+    print(f"Loaded {len(df)} trades  ({df['Year'].min()}–{df['Year'].max()})")
+
+    all_analysis(df)
 
 
 if __name__ == "__main__":
