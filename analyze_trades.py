@@ -12,17 +12,16 @@ import pandas as pd
 
 # ── load ─────────────────────────────────────────────────────────────────────
 
-def load(path: str) -> pd.DataFrame:
-    df = pd.read_csv(path)
+def prepare_data(df):
     df['Entry_Date'] = pd.to_datetime(df['Entry_Date'])
-    df['Exit_Date']  = pd.to_datetime(df['Exit_Date'])
-    df['Year']       = df['Entry_Date'].dt.year
-    df['Hold_Days']  = (df['Exit_Date'] - df['Entry_Date']).dt.days
-    df['Credit']     = df['PUT_Credit_Final'].astype(float)
-    df['Short']      = df['PUT_Short_Final'].astype(float)
-    df['OTM_Pct']    = (df['SPX_Entry'].astype(float) - df['Short']) / df['SPX_Entry'].astype(float) * 100
-    df['Is_Win']     = df['Result'] == 'WIN'                                          # ← add this
-    return df
+    df['Exit_Date'] = pd.to_datetime(df['Exit_Date'])
+    df['Year'] = df['Entry_Date'].dt.year
+    df['Hold_Days'] = (df['Exit_Date'] - df['Entry_Date']).dt.days
+    df['Credit'] = df['PUT_Credit_Final'].astype(float)
+    df['Short'] = df['PUT_Short_Final'].astype(float)
+    df['OTM_Pct'] = (df['SPX_Entry'].astype(float) - df['Short']) / df['SPX_Entry'].astype(float) * 100
+    df['Is_Win'] = df['Result'] == 'WIN'
+    print(f"Loaded {len(df)} trades  ({df['Entry_Date'].min()}–{df['Entry_Date'].max()})")
 
 
 # ── analyses ──────────────────────────────────────────────────────────────────
@@ -181,6 +180,7 @@ def volume_analysis(df: pd.DataFrame):
 
 
 def all_analysis(df):
+    prepare_data(df)
     otm_analysis(df)
     hold_time_analysis(df)
     credit_analysis(df)
@@ -197,9 +197,7 @@ def all_analysis(df):
 def main():
     path = sys.argv[1] if len(sys.argv) > 1 else "outputs/Stock_Put_Spread_Backtest.csv"
     print(f"Loading: {path}")
-    df = load(path)
-    print(f"Loaded {len(df)} trades  ({df['Year'].min()}–{df['Year'].max()})")
-
+    df = pd.read_csv(path)
     all_analysis(df)
 
 
