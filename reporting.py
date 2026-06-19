@@ -59,17 +59,11 @@ def print_results(cfg, results, title, years):
     # Fixed capital sizing using the observed peak concurrent open trades = results['max_concurrent'].
     total_margin = margin_per * results['num_contracts'] * results['max_concurrent']
     annual_pnl = results['total_pnl_dollars'] / years
-    total_return = (total_margin + results['total_pnl_dollars']) / total_margin - 1
-    roc = ((1 + total_return) ** (1 / years) - 1) * 100 if total_margin and years > 0 else 0
 
     log(f"    Avg Credit/Trade:       ${avg_credit:.2f} (incl. rolls)")
     log(f"    Margin per Contract:    ${margin_per:,.2f}")
     log(f"    Peak Observed:          {results['max_concurrent']}  ( matches observed peak)")
-    log(f"    Total Capital Required: ${total_margin:,.2f}")
     log(f"    Annual P&L:             ${annual_pnl:,.2f}")
-    log(f"    Annual ROC:             {roc:.1f}% ((1+{total_return}**(1/{years})-1)")
-    if total_margin:
-        log(f"    Total Return ({years:.0f} yrs):    {total_return*100:.1f}%")
     log()
 
     log("")
@@ -94,22 +88,22 @@ def print_results(cfg, results, title, years):
     log()
 
 
-
 def export_trades_to_csv(results, filename):
     with open(filename, 'w', newline='') as f:
         w = csv.writer(f)
         w.writerow([
             'Trade_ID', 'Ticker', 'Entry_Date', 'Expiration', 'Exit_Date', 'DTE',
-            'SPX_Entry', 'SPX_Exit', 'SPX_Expiration', 'VIX_Entry',
+            'SPX_Entry', 'SPX_Exit', 'SPX_Expiration', 'Volume_Entry', 'VIX_Entry',
             'PUT_Short_Final', 'PUT_Long_Final', 'PUT_Credit_Final', 'PUT_Rolls', 'PUT_Exit',
             'CALL_Short_Final', 'CALL_Long_Final', 'CALL_Credit_Final', 'CALL_Rolls', 'CALL_Exit',
-            'Banked_Roll_PnL_$', 'Total_PnL_$', 'PnL_%',
+            'Cumulative_Credit_$', 'Banked_Roll_PnL_$', 'Total_PnL_$', 'PnL_%',
             'Exit_Reason', 'Result'
         ])
         for t in results['closed_trades']:
             dte = (t.expiration_date - t.entry_date).days
             res = 'WIN' if t.pnl > 0 else 'LOSS' if t.pnl < 0 else 'BE'
             pnl_d   = t.pnl * 100 * results['num_contracts']
+            credit_d = t.cumulative_credit * 100 * results['num_contracts']
             banked_d = t.banked_pnl * 100 * results['num_contracts']
             pnl_pct = (t.pnl / t.cumulative_credit * 100) if t.cumulative_credit else 0
             spx_exit = t.spx_price_at_exit or 0
@@ -124,6 +118,7 @@ def export_trades_to_csv(results, filename):
                 f"{t.spx_price_at_entry:.2f}",
                 f"{spx_exit:.2f}",
                 f"{spx_exp:.2f}",
+                f"{t.volume_10med_at_entry:.2f}",
                 f"{t.vix_at_entry:.2f}",
                 t.short_strike, t.long_strike,
                 f"{t.credit:.2f}",
@@ -133,6 +128,7 @@ def export_trades_to_csv(results, filename):
                 f"{t.call_credit:.2f}",
                 len(t.call_rolls),
                 t.call_exit_reason or '',
+                f"{credit_d:.2f}",
                 f"{banked_d:.2f}",
                 f"{pnl_d:.2f}",
                 f"{pnl_pct:.1f}",

@@ -45,14 +45,11 @@ class StockPutSpreadStrategy(BaseStrategy):
 
     # ── BaseStrategy: ───────────────────
 
-    def _price(self, ticker, ts: pd.Timestamp) -> float:
-        df = self.price_data[ticker]
-        return float(df.loc[ts, 'Close']) if ts in df.index else 0.0
-
+    # TODO: move to common util
     def _volatility(self, ticker, ts: pd.Timestamp) -> float:
         dates = self.sorted_dates.get(ticker, [])
         if ts not in dates:
-            return -1
+            return 0.18
         idx = dates.index(ts)
         if idx >= 20:
             df = self.price_data[ticker]
@@ -60,19 +57,6 @@ class StockPutSpreadStrategy(BaseStrategy):
             hist = [float(df.loc[d, 'Close']) for d in window]
             hv = calculate_historical_volatility(hist)
             vol = hv * self.cfg.vol_scalar
-            # TODO: debug
-            if ticker in gcfg.stocks.debug_tickers:
-                log(f"{ts.date()} {ticker} hv={hv:.3f}")
-            if self._vol_debug_count < gcfg.stocks.debug_trade_id:
-                print(
-                    f"VOL {self._vol_debug_count + 1}: "
-                    f"{ticker} "
-                    f"{ts.date()} "
-                    f"hv={hv:.3f} "
-                    f"scalar={self.cfg.vol_scalar:.2f} "
-                    f"vol={vol:.3f}"
-                )
-                self._vol_debug_count += 1
             return vol
         return 0.18
 
@@ -80,7 +64,7 @@ class StockPutSpreadStrategy(BaseStrategy):
     # ── inherited functions called by backtest_engine
     def load_data(self, start_date, delta_days):
         sp500_list = get_spy_ticker_list()
-        log(" Loading stock price data...")
+        log(f" Loading stock price data from {start_date.date()}, delta_days={delta_days} for {len(sp500_list)} tickers...")
         cache = CachedailyOHLCV(path=gcfg.paths.yf_data_path, start_date=start_date, delta_days=delta_days)
         self.price_data = cache.download_list(sp500_list)
         log(f"  ✓ Loaded {len(self.price_data)} tickers")
@@ -136,14 +120,13 @@ class StockPutSpreadStrategy(BaseStrategy):
         Called by backtest_engine_stocks.py after scan_all_tickers() signals.
         """
         ticker = signal.ticker
-        price = self._price(ticker, current_date)
         volatility = self._volatility(ticker, current_date)
         expiration = get_next_friday(current_date, self.cfg.target_dte)
         return create_put_spread_from_scan(
             ticker            = ticker,
             entry_date        = current_date,
             expiration_date   = expiration,
-            spx_price         = price,
+            spx_price_df      = self.price_data[ticker],
             vix               = 0.0,           # not used in PutSpreadTrade
             short_strike      = signal.strike,
             volatility        = volatility,
