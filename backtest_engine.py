@@ -13,6 +13,9 @@ Works for both SPX iron condor and stock put spread strategies.
 """
 import os
 from datetime import datetime, timedelta
+
+import pandas as pd
+
 from config import gcfg
 from base_strategy import TradeEntryReason
 from reporting import print_results, export_trades_to_csv
@@ -55,10 +58,10 @@ def run_backtest(start_date, delta_days, strategy, run_title):
     log(f"RUNNING 10-YEAR ({run_title})")
     log("=" * 80)
     log()
-    log(f"  Period:       {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
+    print(f"  Period:       {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
     strategy.print_strategy_config()
-    log(f"  Exits:       50% profit, 10 DTE smart exit, 2x stop  (gap-aware)")
-    log()
+    print(f"  Exits:       50% profit, 10 DTE smart exit, 2x stop  (gap-aware)")
+    print()
 
     open_trades   = []
     closed_trades = []
@@ -285,20 +288,20 @@ def run_main(*, strategy, title, script_name, csv_filename, start_date, end_date
     log(f"FINAL SUMMARY - BACKTEST  ({title})")
     log("=" * 80)
     log()
-    log(f"  +{'-'*60}+")
-    log(f"  |{'CAPITAL INVESTED:':^30}{'${:,.0f}'.format(margin):^30}|")
+    print(f"  +{'-'*60}+")
+    print(f"  |{'CAPITAL INVESTED:':^30}{'${:,.0f}'.format(margin):^30}|")
     for line in (extra_summary_lines(results) if extra_summary_lines else []):
-        log(line)
-    log(f"  |{'TOTAL P&L :':^30}{'${:,.0f}'.format(results['total_pnl_dollars']):^30}|")
+        print(line)
+    print(f"  |{'TOTAL P&L :':^30}{'${:,.0f}'.format(results['total_pnl_dollars']):^30}|")
     if margin:
-        log(f"  |{'TOTAL RETURN ({:.0f} yrs):'.format(years):^30}{'{:.1f}%'.format(total_return*100):^30}|")
-    log(f"  |{'ANNUAL P&L:':^30}{'${:,.0f}'.format(annual_pnl):^30}|")
-    log(f"  |{'ANNUAL ROC:':^30}{'{:.1f}%'.format(roc):^30}|")
-    log(f"  |{'WIN RATE:':^30}{'{:.1f}%'.format(results['win_rate']):^30}|")
-    log(f"  |{'PROFIT FACTOR:':^30}{'{:.2f}'.format(results['profit_factor']):^30}|")
-    log(f"  |{'TOTAL ROLLS (PUT/CALL):':^30}{'{}/{}'.format(results['total_put_rolls'], results['total_call_rolls']):^30}|")
-    log(f"  +{'-'*60}+")
-    log()
+        print(f"  |{'TOTAL RETURN ({:.0f} yrs):'.format(years):^30}{'{:.1f}%'.format(total_return*100):^30}|")
+    print(f"  |{'ANNUAL P&L:':^30}{'${:,.0f}'.format(annual_pnl):^30}|")
+    print(f"  |{'ANNUAL ROC:':^30}{'{:.1f}%'.format(roc):^30}|")
+    print(f"  |{'WIN RATE:':^30}{'{:.1f}%'.format(results['win_rate']):^30}|")
+    print(f"  |{'PROFIT FACTOR:':^30}{'{:.2f}'.format(results['profit_factor']):^30}|")
+    print(f"  |{'TOTAL ROLLS (PUT/CALL):':^30}{'{}/{}'.format(results['total_put_rolls'], results['total_call_rolls']):^30}|")
+    print(f"  +{'-'*60}+")
+    print()
     csv_path = os.path.join(gcfg.paths.output_path, csv_filename)
     export_trades_to_csv(results, csv_path)
-    all_analysis(results)
+    all_analysis(pd.read_csv(gcfg.paths.output_path + "/" + csv_filename))

@@ -1,0 +1,125 @@
+C:\Neeraj\backup\tech\systematicinv\iron-condor\venv\Scripts\python.exe C:\Neeraj\backup\tech\systematicinv\iron-condor\Options_Using_SPX_10_NetDelta_Fixed4.PY
+Loaded 417 trades  (2016-05-09 00:00:00–2026-01-26 00:00:00)
+
+── STRIKE / OTM ANALYSIS ───────────────────────────────────────
+  Avg OTM%    : 3.2%
+  Median OTM% : 2.9%
+  Min OTM%    : 0.5%
+  Max OTM%    : 10.2%
+
+  OTM% distribution:
+            Trades  Win_Rate  Avg_PnL
+OTM_Bucket
+0-5%           362     66.02    32.76
+5-10%           54     79.63   437.07
+10-15%           1    100.00  1252.49
+
+── HOLD TIME ANALYSIS ──────────────────────────────────────────
+  Avg hold days  : 15.2
+  Median         : 14.0
+  % closed day 1 : 2.4%
+  % closed <= 3d : 9.8%
+  % closed <= 5d : 16.8%
+  % held > 10d   : 57.6%
+
+  Hold time distribution:
+             Trades  Win_Rate  Avg_PnL
+Hold_Bucket
+1d               10    100.00   646.17
+2-3d             31    100.00   640.80
+4-5d             29    100.00   653.73
+6-10d           107     99.07   708.09
+11-20d           80     88.75   439.74
+21-40d          160     22.50  -746.98
+
+── CREDIT ANALYSIS ─────────────────────────────────────────────
+  Avg credit       : $7.00
+  Median credit    : $7.43
+  Min credit       : $2.2400
+  Max credit       : $10.25
+  % credit < $0.10 : 0.0%
+  % credit < $0.50 : 0.0%
+
+  Credit size distribution:
+               Trades  Win_Rate  Avg_PnL
+Credit_Bucket
+2.00-5.00          54     51.85  -287.61
+>5.00             363     70.25   143.92
+
+── YEARLY BREAKDOWN ────────────────────────────────────────────
+      Trades  Win_Rate  Total_PnL  Avg_Hold  Avg_OTM  Avg_Credit
+Year
+2016      33     81.82    6210.66     13.27     2.80        5.44
+2017      47     63.83     651.07     15.94     1.69        4.49
+2018      48     58.33   -6785.42     15.04     3.62        6.74
+2019      53     73.58    5063.65     14.28     3.40        6.63
+2020      18     66.67      94.72     13.17     3.29        7.20
+2021      46     65.22    3225.30     16.24     3.23        7.60
+2022      23     60.87    1118.29     16.83     5.43        8.63
+2023      48     68.75    9002.80     16.60     3.44        7.68
+2024      51     58.82    -141.97     16.76     2.96        7.84
+2025      46     80.43   16546.22     11.96     3.40        8.21
+2026       4     75.00    1726.64     19.75     2.25        7.80
+
+── EXIT REASON BREAKDOWN ───────────────────────────────────────
+                          Trades  Avg_PnL    Tot_PnL  Avg_Hold  Avg_OTM
+Exit_Reason
+10 DTE Exit (Cut Loss)        78 -1483.96 -115748.96     22.87     3.04
+10 DTE Exit (Profitable)      24   256.08    6145.86     22.67     2.83
+50% Profit Target            258   714.62  184372.73      9.05     3.42
+Both legs stopped out         11 -2212.81  -24340.90     15.36     1.43
+Expiration                    46  -298.19  -13716.77     32.33     2.96
+
+── TOP 10 WORST TRADES ─────────────────────────────────────────
+ Trade_ID Ticker Entry_Date  Exit_Date  Hold_Days  SPX_Entry  Short  OTM_Pct  Credit  Total_PnL_$            Exit_Reason
+      401    SPX 2025-10-06 2025-10-27         21    6740.28 6655.0 1.265229    6.94     -3927.52  Both legs stopped out
+      157    SPX 2019-07-15 2019-08-06         22    3014.27 2890.0 4.122723    5.05     -3825.56 10 DTE Exit (Cut Loss)
+      308    SPX 2023-10-19 2023-11-14         26    4277.95 4135.0 3.341554    7.73     -3766.01 10 DTE Exit (Cut Loss)
+      158    SPX 2019-07-22 2019-08-13         22    2985.06 2880.0 3.519527    5.38     -3574.78 10 DTE Exit (Cut Loss)
+      185    SPX 2020-02-03 2020-02-25         22    3248.82 3150.0 3.041720    6.87     -2967.96 10 DTE Exit (Cut Loss)
+      230    SPX 2021-09-07 2021-09-28         21    4520.14 4355.0 3.653427    6.55     -2866.27 10 DTE Exit (Cut Loss)
+      346    SPX 2024-07-29 2024-08-20         22    5463.56 5270.0 3.542745    8.33     -2726.78 10 DTE Exit (Cut Loss)
+      392    SPX 2025-07-31 2025-08-12         12    6339.55 6240.0 1.570301    7.13     -2699.36  Both legs stopped out
+       83    SPX 2018-01-22 2018-02-02         11    2832.96 2790.0 1.516435    4.84     -2675.79  Both legs stopped out
+      125    SPX 2018-11-26 2018-12-18         22    2673.58 2545.0 4.809282    7.79     -2629.57 10 DTE Exit (Cut Loss)
+
+── TOP 10 BEST TRADES ──────────────────────────────────────────
+ Trade_ID Ticker Entry_Date  Exit_Date  Hold_Days  SPX_Entry  Short   OTM_Pct  Credit  Total_PnL_$       Exit_Reason
+      417    SPX 2026-01-26 2026-02-27         32    6950.30 6765.0  2.666072    8.07      1359.22        Expiration
+      380    SPX 2025-05-05 2025-05-08          3    5650.59 5075.0 10.186370   10.25      1252.49 50% Profit Target
+      264    SPX 2022-11-28 2022-12-09         11    3964.02 3695.0  6.786545    9.15      1220.55 50% Profit Target
+      217    SPX 2021-06-01 2021-06-10          9    4202.03 4055.0  3.499023    7.95      1115.33 50% Profit Target
+        9    SPX 2016-07-11 2016-07-25         14    2137.04 2025.0  5.242766    7.44      1112.42 50% Profit Target
+      133    SPX 2019-01-25 2019-02-04         10    2663.59 2535.0  4.827695    7.83      1106.74 50% Profit Target
+      225    SPX 2021-08-02 2021-08-16         14    4387.11 4260.0  2.897352    7.69      1098.75 50% Profit Target
+      367    SPX 2024-12-30 2025-01-21         22    5906.93 5685.0  3.757112    8.41      1085.58 50% Profit Target
+      363    SPX 2024-11-29 2024-12-05          6    6032.38 5845.0  3.106237    8.27      1073.42 50% Profit Target
+      132    SPX 2019-01-22 2019-01-25          3    2633.17 2445.0  7.146139    8.74      1057.40 50% Profit Target
+
+── PER-TICKER SUMMARY (losers first) ───────────────────────────
+        Trades  Win_Rate  Total_PnL  Avg_OTM  Avg_Credit  Avg_Hold
+Ticker
+SPX        417     67.87   36711.96     3.21         7.0     15.15
+
+── VOLUME ANALYSIS (10d Median at Entry) ───────────────────────
+  Avg volume     : 0
+  Median volume  : 0
+  Min volume     : 0
+  Max volume     : 0
+  % under 100K   : 100.0%
+  % under 500K   : 100.0%
+  % under 1M     : 100.0%
+  % under 10M    : 100.0%
+  % over 10M     : 0.0%
+
+  Volume bucket distribution:
+Empty DataFrame
+Columns: [Trades, Win_Rate, Avg_PnL, Avg_OTM, Avg_Credit]
+Index: []
+
+  Avg loss by volume bucket (losing trades only):
+Empty DataFrame
+Columns: [Trades, Avg_Loss, Max_Loss]
+Index: []
+
+Process finished with exit code 0

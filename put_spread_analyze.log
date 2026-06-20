@@ -1,6 +1,6 @@
 C:\Neeraj\backup\tech\systematicinv\iron-condor\venv\Scripts\python.exe C:\Neeraj\backup\tech\systematicinv\iron-condor\analyze_trades.py
 Loading: outputs/Stock_Put_Spread_Backtest.csv
-Loaded 960 trades  (2022–2026)
+Loaded 960 trades  (2022-06-02 00:00:00–2026-05-08 00:00:00)
 
 ── STRIKE / OTM ANALYSIS ───────────────────────────────────────
   Avg OTM%    : 13.9%

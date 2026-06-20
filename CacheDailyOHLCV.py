@@ -41,6 +41,7 @@ class CachedailyOHLCV:
         return df.index.max().to_pydatetime()
 
     # Creating a Function
+    # TODO: move to date_utils.py
     @staticmethod
     def check_weekday(wkdate):
         # computing the parameter date with len function

@@ -12,46 +12,46 @@ def log(msg=""):
 
 
 def print_results(cfg, results, title, years):
-    log()
-    log("=" * 80)
-    log(f"{title} ")
-    log("=" * 80)
-    log()
+    print()
+    print("=" * 80)
+    print(f"{title} ")
+    print("=" * 80)
+    print()
 
-    log("  TRADE STATISTICS")
-    log("  " + "-" * 60)
-    log(f"    Total Trades:           {results['total_trades']}")
-    log(f"    Monday Entries:         {results['trades_entered'] - results['reentry_trades']}")
-    log(f"    Re-entry Trades:        {results['reentry_trades']}")
-    log(f"    Winning Trades:         {results['winning_trades']}")
-    log(f"    Losing Trades:          {results['losing_trades']}")
-    log(f"    Win Rate:               {results['win_rate']:.1f}%")
-    log()
+    print("  TRADE STATISTICS")
+    print("  " + "-" * 60)
+    print(f"    Total Trades:           {results['total_trades']}")
+    print(f"    Monday Entries:         {results['trades_entered'] - results['reentry_trades']}")
+    print(f"    Re-entry Trades:        {results['reentry_trades']}")
+    print(f"    Winning Trades:         {results['winning_trades']}")
+    print(f"    Losing Trades:          {results['losing_trades']}")
+    print(f"    Win Rate:               {results['win_rate']:.1f}%")
+    print()
 
-    log("  EXIT REASONS")
-    log("  " + "-" * 60)
+    print("  EXIT REASONS")
+    print("  " + "-" * 60)
     for reason, count in sorted(results['exit_reasons'].items(), key=lambda x: -x[1]):
         pct = count / results['total_trades'] * 100 if results['total_trades'] else 0
-        log(f"    {reason:<35} {count:>4} ({pct:>5.1f}%)")
-    log()
+        print(f"    {reason:<35} {count:>4} ({pct:>5.1f}%)")
+    print()
 
-    log("  PROFIT & LOSS")
-    log("  " + "-" * 60)
-    log(f"    Total P&L:              ${results['total_pnl_dollars']:,.2f}")
-    log(f"    Gross Profit:           ${results['gross_profit'] * 100 * results['num_contracts']:,.2f}")
-    log(f"    Gross Loss:             ${results['gross_loss']   * 100 * results['num_contracts']:,.2f}")
-    log(f"    Profit Factor:          {results['profit_factor']:.2f}")
-    log(f"    Avg Win:                ${results['avg_win']  * 100 * results['num_contracts']:,.2f}")
-    log(f"    Avg Loss:               ${results['avg_loss'] * 100 * results['num_contracts']:,.2f}")
-    log(f"    Max Drawdown:           ${results['max_drawdown_dollars']:,.2f}")
-    log()
+    print("  PROFIT & LOSS")
+    print("  " + "-" * 60)
+    print(f"    Total P&L:              ${results['total_pnl_dollars']:,.2f}")
+    print(f"    Gross Profit:           ${results['gross_profit'] * 100 * results['num_contracts']:,.2f}")
+    print(f"    Gross Loss:             ${results['gross_loss']   * 100 * results['num_contracts']:,.2f}")
+    print(f"    Profit Factor:          {results['profit_factor']:.2f}")
+    print(f"    Avg Win:                ${results['avg_win']  * 100 * results['num_contracts']:,.2f}")
+    print(f"    Avg Loss:               ${results['avg_loss'] * 100 * results['num_contracts']:,.2f}")
+    print(f"    Max Drawdown:           ${results['max_drawdown_dollars']:,.2f}")
+    print()
 
-    log("  CAPITAL ANALYSIS")
-    log("  " + "-" * 60)
+    print("  CAPITAL ANALYSIS")
+    print("  " + "-" * 60)
     if not results['closed_trades']:
-        log("    No closed trades. Capital, ROC, and yearly breakdown are not available.")
-        log("    Check the strategy date range, loaded market data, and scanner entry filters.")
-        log()
+        print("    No closed trades. Capital, ROC, and yearly breakdown are not available.")
+        print("    Check the strategy date range, loaded market data, and scanner entry filters.")
+        print()
         return
 
     avg_credit = sum(t.cumulative_credit for t in results['closed_trades']) / len(results['closed_trades'])
@@ -60,21 +60,21 @@ def print_results(cfg, results, title, years):
     total_margin = margin_per * results['num_contracts'] * results['max_concurrent']
     annual_pnl = results['total_pnl_dollars'] / years
 
-    log(f"    Avg Credit/Trade:       ${avg_credit:.2f} (incl. rolls)")
-    log(f"    Margin per Contract:    ${margin_per:,.2f}")
-    log(f"    Peak Observed:          {results['max_concurrent']}  ( matches observed peak)")
-    log(f"    Annual P&L:             ${annual_pnl:,.2f}")
-    log()
+    print(f"    Avg Credit/Trade:       ${avg_credit:.2f} (incl. rolls)")
+    print(f"    Margin per Contract:    ${margin_per:,.2f}")
+    print(f"    Peak Observed:          {results['max_concurrent']}  ( matches observed peak)")
+    print(f"    Annual P&L:             ${annual_pnl:,.2f}")
+    print()
 
-    log("")
-    log("  YEARLY BREAKDOWN")
-    log("  " + "-" * 60)
+    print("")
+    print("  YEARLY BREAKDOWN")
+    print("  " + "-" * 60)
     by_year = {}
     for trade in results['closed_trades']:
         by_year.setdefault(trade.entry_date.year, []).append(trade)
 
-    log(f"    {'Year':<6} {'Trades':<8} {'Wins':<6} {'Win%':<8} {'Rolls':<8} {'P&L':<14} {'ROC':<10}")
-    log(f"    {'-'*6} {'-'*8} {'-'*6} {'-'*8} {'-'*8} {'-'*14} {'-'*10}")
+    print(f"    {'Year':<6} {'Trades':<8} {'Wins':<6} {'Win%':<8} {'Rolls':<8} {'P&L':<14} {'ROC':<10}")
+    print(f"    {'-'*6} {'-'*8} {'-'*6} {'-'*8} {'-'*8} {'-'*14} {'-'*10}")
     for year in sorted(by_year):
         ts = by_year[year]
         n = len(ts)
@@ -83,9 +83,9 @@ def print_results(cfg, results, title, years):
         wr = w / n * 100 if n else 0
         ypnl = sum(x.pnl for x in ts) * 100 * results['num_contracts']
         yroc = ypnl / total_margin * 100 if total_margin else 0
-        log(f"    {year:<6} {n:<8} {w:<6} {wr:<7.1f}% {rolls:<8} ${ypnl:>11,.2f} {yroc:>8.1f}%")
+        print(f"    {year:<6} {n:<8} {w:<6} {wr:<7.1f}% {rolls:<8} ${ypnl:>11,.2f} {yroc:>8.1f}%")
         total_margin += ypnl  # assumes profits are reinvested year-over-year for ROC calculation
-    log()
+    print()
 
 
 def export_trades_to_csv(results, filename):
@@ -153,11 +153,11 @@ def print_stock_results(results):
 
 def _print_ticker_pnl(results):
     """Per-ticker P&L breakdown: trades, wins, win rate, total PnL."""
-    log()
-    log("  PER-TICKER P&L BREAKDOWN")
-    log("  " + "-" * 60)
-    log(f"    {'Ticker':<8} {'Trades':<8} {'Wins':<6} {'Win%':<8} {'Total P&L'}")
-    log(f"    {'-'*8} {'-'*8} {'-'*6} {'-'*8} {'-'*12}")
+    print()
+    print("  PER-TICKER P&L BREAKDOWN")
+    print("  " + "-" * 60)
+    print(f"    {'Ticker':<8} {'Trades':<8} {'Wins':<6} {'Win%':<8} {'Total P&L'}")
+    print(f"    {'-'*8} {'-'*8} {'-'*6} {'-'*8} {'-'*12}")
 
     by_ticker = {}
     for t in results['closed_trades']:
@@ -170,8 +170,8 @@ def _print_ticker_pnl(results):
         w   = sum(1 for t in ts if t.pnl > 0)
         wr  = w / n * 100 if n else 0
         pnl = sum(t.pnl for t in ts) * 100 * results['num_contracts']
-        log(f"    {ticker:<8} {n:<8} {w:<6} {wr:<7.1f}% ${pnl:>10,.2f}")
-    log()
+        print(f"    {ticker:<8} {n:<8} {w:<6} {wr:<7.1f}% ${pnl:>10,.2f}")
+    print()
 
 
 def _print_earnings_hit_rate(results):

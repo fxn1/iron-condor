@@ -110,6 +110,7 @@ def scan(current_date: datetime, price_df: pd.DataFrame, earnings_dates: list[da
         yesterday = current_date - timedelta(days=scanner_cfg.earnings_lookahead_days)
         if yesterday.date() not in earnings_dates:
             return False, None
+    # print(f"DEBUG POOL:  {yesterday.date()} in earning date")
 
     # ── slice history up to and including current_date ───────────────────
     history = price_df[price_df.index <= current_date]
@@ -118,14 +119,17 @@ def scan(current_date: datetime, price_df: pd.DataFrame, earnings_dates: list[da
 
     close = history['Close']
     current_price = float(close.iloc[-1])
+    # print(f"DEBUG: history len={len(history)}, current_price={current_price}")
 
     # ── gate 2: EMA(20) trending up ──────────────────────────────────────
     if not _ema_trending_up(close, scanner_cfg):
         return False, None
+    # print(f"DEBUG: ema_trending_up")
 
     # ── gate 3: RSI(14) slope > threshold ────────────────────────────────
     if not _rsi_slope(close, scanner_cfg):
         return False, None
+    # print(f"DEBUG: rsi_slope")
 
     # ── gate 4: support exists and price is sufficiently above it ────────
     support = _find_support(close, scanner_cfg)
@@ -133,11 +137,13 @@ def scan(current_date: datetime, price_df: pd.DataFrame, earnings_dates: list[da
         return False, None
 
     min_price = support * (1 + scanner_cfg.min_price_above_support_pct)
+    # print(f"DEBUG: support={support}, min_price_needed={min_price}")
     if current_price < min_price:
         return False, None
 
     # ── gate 5: strike = nearest standard increment below support ────────
     strike = _nearest_strike_below(support, scanner_cfg.strike_increment)
+    # print(f"DEBUG: strike={strike}, strike_increment={scanner_cfg.strike_increment}")
     if strike <= 0:
         return False, None
     return True, strike
