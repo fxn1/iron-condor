@@ -6,6 +6,8 @@ from typing import Optional
 
 import pandas as pd
 
+from snp500_ticker_hist import Snp500TickerHist
+
 
 # ============================================================================
 # DATE HELPERS
@@ -46,6 +48,7 @@ class BaseStrategy(ABC):
     def __init__(self):
         self.vix_data = None
         self.used_expirations = set()
+        self.hist = Snp500TickerHist()
 
     @abstractmethod
     def load_data(self, start_date, delta_days):

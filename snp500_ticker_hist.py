@@ -28,13 +28,13 @@ def log(msg=""):
 
 class Snp500TickerHist:
     def __init__(self):
-        self.current_tickers = set()        # cached active ticker set, mutated by update_universe()
-        self.date_added = {}                # {ticker: date} from the current-constituents table
+        self.current_tickers = set()        # cached full ticker set as of start_date
+        self.active_tickers = set()         # cached active ticker set, update_universe() keeps it current on each date
         self.changes = {}                   # sorted list of date --> (added:list[str], removed:list[str])
 
     # ── PUBLIC API ──────────────────────────────────────────────────────
 
-    def get_spy_ticker_list(self) -> list[str]:
+    def get_spy_ticker_list(self) -> set[str]:
         """
         Fetch current S&P 500 constituents + their 'Date added', and the
         'Selected changes' table, from Wikipedia. Caches both internally.
@@ -45,7 +45,7 @@ class Snp500TickerHist:
             tables = pd.read_html(StringIO(html))
         except Exception as e:
             log(f"Failed to fetch S&P 500 page: {e}")
-            return list(self.current_tickers)  # fall back to whatever is cached
+            return self.current_tickers  # fall back to whatever is cached
 
         # ── table 1: current constituents ────────────────────────────
         const_table = self._find_table(tables, required_cols=['Symbol'])
@@ -53,20 +53,18 @@ class Snp500TickerHist:
             log("WARN: could not find current-constituents table")
             for i, t in enumerate(tables):
                 log(f"table {i} cols {t.columns.tolist()}")
-            return list(self.current_tickers)
+            return self.current_tickers
 
         symbol_col = self._match_col(const_table, 'Symbol')
         added_col  = self._match_col(const_table, 'Date added')
 
         self.current_tickers = set(const_table[symbol_col].astype(str).str.strip().tolist())
+        self.active_tickers = set(const_table[symbol_col].astype(str).str.strip().tolist())
 
         if added_col is not None:
             for _, row in const_table.iterrows():
                 t = str(row[symbol_col]).strip()
                 dt = pd.to_datetime(row[added_col], errors='coerce')
-                if pd.notna(dt):
-                    self.date_added[t] = dt.date()
-        log(f"sp500 rows <class 'list'> with length {len(self.current_tickers)}")
 
         # ── table 2: selected changes ─────────────────────────────────
         changes_table = self._find_table(tables, required_cols=['Date', 'Added', 'Removed'])
@@ -74,23 +72,40 @@ class Snp500TickerHist:
             log("WARN: could not find 'Selected changes' table — update_universe() will be a no-op")
         else:
             self._parse_changes_table(changes_table)
-        self.recreate_earliest_universe()
+        return self.current_tickers
 
-    def update_universe(self, current_date) -> None:
+    def update_universe(self, input_date) -> None:
         """
-        Apply any add/remove events whose date is <= current_date.
-         Mutates self.current_tickers in place.
-        Assumes update_universe() is called with non-decreasing current_date
-        across calls (i.e. iterating forward through a backtest date loop).
+        Apply any add/remove events whose date is == input_date. Mutates self.active_tickers in place.
         """
-        added_tickers, removed_tickers = self.changes.get(self._to_date(current_date), ([], []))
+        added_tickers, removed_tickers = self.changes.get(self._to_date(input_date), ([], []))
         for t in added_tickers:
-            self.current_tickers.add(t)
+            self.active_tickers.add(t)
         for t in removed_tickers:
-            self.current_tickers.discard(t)
+            self.active_tickers.discard(t)
+
+    def universe_as_of(self, target_date: datetime = datetime.max):
+        for dt in sorted(self.changes.keys(), reverse=True):
+            if dt <= self._to_date(target_date):
+                break
+            self.reverse_update_universe(dt)
+
+    def reverse_update_universe(self, input_date):
+        """
+        Roll self.active_tickers backward the change event, for input_date reversing add/remove.
+        After this call, self.active_tickers reflects the universe just before the input_date
+        recorded change event.
+        """
+        added_tickers, removed_tickers = self.changes[input_date]
+        for t in added_tickers:
+            self.active_tickers.discard(t)
+        for t in removed_tickers:
+            self.active_tickers.add(t)
+            self.current_tickers.add(t)
+
 
     def is_in_universe(self, ticker: str) -> bool:
-        return ticker in self.current_tickers
+        return ticker in self.active_tickers
 
     # ── INTERNAL HELPERS ────────────────────────────────────────────────
 
@@ -151,7 +166,7 @@ class Snp500TickerHist:
             else:
                 self.changes[dt.date()] = [added_tickers, removed_tickers]
             # log(f"date={d.date()} -> [added = {added_tickers}, removed = {removed_tickers}]")
-        log(f"Loaded {len(self.changes)} S&P 500 change events")
+        log(f"S&P 500 change events change events loaded: {len(self.changes)}")
 
     @staticmethod
     def _split_tickers(val):
@@ -163,27 +178,13 @@ class Snp500TickerHist:
             return []
         return [x.strip() for x in s.split(',') if x.strip()]
 
-    def recreate_earliest_universe(self):
-        """
-        Roll self.current_tickers backward through every change event,
-        in descending date order, reversing add/remove. After this call,
-        self.current_tickers reflects the universe just before the earliest
-        recorded change event.
-        """
-        for dt in sorted(self.changes.keys(), reverse=True):
-            added_tickers, removed_tickers = self.changes[dt]
-            for t in added_tickers:
-                self.current_tickers.discard(t)
-            for t in removed_tickers:
-                self.current_tickers.add(t)
-
 
 if __name__ == "__main__":
     # quick manual smoke test — run on a machine with internet access
     hist = Snp500TickerHist()
-    hist.get_spy_ticker_list()
-    log(f"Current tickers: {len(hist.current_tickers)}")
-    log(f"Change events loaded: {len(hist.changes)}")
+    sp500_list = list(hist.get_spy_ticker_list())
+    log(f"Current tickers: {len(sp500_list)}")
+    log(f"Current active tickers: {len(hist.active_tickers)}")
 
     items = list(hist.changes.items())
     for d, (added, removed) in items[:3]:
@@ -191,9 +192,9 @@ if __name__ == "__main__":
     for d, (added, removed) in items[-3:]:
         log(f"Last few events: d={d}, added {added}, removed {removed} ")
 
-    for d in sorted(hist.changes.keys()):
-        if d > hist._to_date(datetime(2026, 6, 19)):
-            break
-        hist.update_universe(d)
+    asOfDate = datetime(2026, 6, 19)
+    hist.universe_as_of(asOfDate)
+    log(f"Current tickers asOfDate {asOfDate}: {len(hist.current_tickers)}")
+    log(f"Current active tickers asOfDate {asOfDate}: {len(hist.active_tickers)}")
     log(f"POOL in universe after update_universe(2026-06-19): {hist.is_in_universe('POOL')}")
     log(f"MRVL in universe after update_universe(2026-06-19): {hist.is_in_universe('MRVL')}")

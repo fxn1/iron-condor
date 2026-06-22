@@ -13,7 +13,7 @@ from datetime import datetime
 import pandas as pd
 from backtest_engine import run_main
 from base_strategy import BaseStrategy, TradeSignal, TradeEntryReason, get_next_friday
-from CacheDailyOHLCV import CachedailyOHLCV, get_spy_ticker_list
+from CacheDailyOHLCV import CachedailyOHLCV
 from CacheEarning import EarningsCache
 from volatility import calculate_historical_volatility
 from scanner import scan
@@ -63,10 +63,10 @@ class StockPutSpreadStrategy(BaseStrategy):
     # ── BaseStrategy interface ────────────────────────────────────────────
     # ── inherited functions called by backtest_engine
     def load_data(self, start_date, delta_days):
-        sp500_list = get_spy_ticker_list()
-        sp500_list.append('POOL')
-        sp500_list.append('CPB')
-        # sp500_list = [, 'ISRG', 'LMT', 'TRV', 'NUE', 'SNA']
+        sp500_list = list(self.hist.get_spy_ticker_list())
+        self.hist.universe_as_of(start_date)
+        log(f"Current tickers: {len(sp500_list)}")
+
         log(f" Loading stock price data from {start_date.date()}, delta_days={delta_days} for {len(sp500_list)} tickers...")
         cache = CachedailyOHLCV(path=gcfg.paths.yf_data_path, start_date=start_date, delta_days=delta_days)
         self.price_data = cache.download_list(sp500_list)

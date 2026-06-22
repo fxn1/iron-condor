@@ -26,6 +26,10 @@ def print_results(cfg, results, title, years):
     print(f"    Winning Trades:         {results['winning_trades']}")
     print(f"    Losing Trades:          {results['losing_trades']}")
     print(f"    Win Rate:               {results['win_rate']:.1f}%")
+    print(f"    Skipped (VIX > {cfg.vix_no_trade}):     {results['trades_skipped_vix']}")
+    print(f"    Skipped (DUP_EXP):      {results['skipped_duplicate_exp']}")
+    print(f"    Skipped (CREDIT < > {cfg.min_credit}):   {results['skipped_low_credit']}")
+    print(f"    Skipped (NOT_IN_UNIV):  {results['skipped_not_in_universe']}")
     print()
 
     print("  EXIT REASONS")

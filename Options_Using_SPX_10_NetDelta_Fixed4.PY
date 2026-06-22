@@ -56,6 +56,8 @@ class Fixed4Strategy(BaseStrategy):
 
     # BaseStrategy — unified interface engine calls
     def load_data(self, start_date, delta_days):
+        self.hist.current_tickers.add(SPX_TICKER)
+        self.hist.active_tickers.add(SPX_TICKER)
         VIX_DATA_PATH = os.path.normpath(os.path.join(gcfg.paths.data_path, 'VIX_Daily_Data.xlsx'))
         if not os.path.exists(VIX_DATA_PATH):
             raise FileNotFoundError(VIX_DATA_PATH)
@@ -171,7 +173,6 @@ class Fixed4Strategy(BaseStrategy):
         print(f"    Trades that rolled at least 1x: {results['rolled_trades']}")
         print(f"    Total PUT-side rolls:           {results['total_put_rolls']}")
         print(f"    Total CALL-side rolls:          {results['total_call_rolls']}")
-        print(f"    Skipped (VIX > {self.cfg.vix_no_trade}):             {results['trades_skipped_vix']}")
         print()
 
     def fill_expiration_price(self, trade):

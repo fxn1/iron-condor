@@ -21,6 +21,7 @@ from base_strategy import TradeEntryReason
 from reporting import print_results, export_trades_to_csv
 from analyze_trades import all_analysis
 
+
 def log(msg=""):
     print(f"{datetime.now()}  {msg}")
 
@@ -72,6 +73,7 @@ def run_backtest(start_date, delta_days, strategy, run_title):
     trades_skipped_vix    = 0
     skipped_duplicate_exp = 0
     skipped_low_credit    = 0
+    skipped_not_in_universe = 0
     profit_target_exits   = 0
     reentry_trades        = 0
     total_put_rolls       = 0
@@ -83,6 +85,7 @@ def run_backtest(start_date, delta_days, strategy, run_title):
     log("  Running backtest...")
 
     for current_date in dates:
+        strategy.hist.update_universe(current_date)  # call this to update universe asofdate (avoid survivorship bias)
         trades_to_close = []
         for trade in open_trades:
             md = strategy.get_market_data(trade, current_date)
@@ -140,6 +143,9 @@ def run_backtest(start_date, delta_days, strategy, run_title):
         # Regular entries
         for signal in strategy.should_enter_trades(current_date):
             if signal.reason == TradeEntryReason.SHOULD_ENTER:
+                if not strategy.hist.is_in_universe(signal.ticker):
+                    skipped_not_in_universe += 1
+                    continue
                 trade_id += 1
                 new_trade = strategy.create_trade(current_date, trade_id, signal)
 
@@ -202,6 +208,7 @@ def run_backtest(start_date, delta_days, strategy, run_title):
         'trades_skipped_vix':    trades_skipped_vix,
         'skipped_duplicate_exp': skipped_duplicate_exp,
         'skipped_low_credit':    skipped_low_credit,
+        'skipped_not_in_universe': skipped_not_in_universe,
         'profit_target_exits':  profit_target_exits,
         'reentry_trades':       reentry_trades,
         'winning_trades':       winning,
