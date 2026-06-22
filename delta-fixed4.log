@@ -1,20 +1,20 @@
 C:\Neeraj\backup\tech\systematicinv\iron-condor\venv\Scripts\python.exe C:\Neeraj\backup\tech\systematicinv\iron-condor\Options_Using_SPX_10_NetDelta_Fixed4.PY
-2026-06-19 18:21:19.643335
-2026-06-19 18:21:19.643335  ================================================================================
-2026-06-19 18:21:19.643335  Options_Using_SPX_10_NetDelta_Fixed4.PY
-2026-06-19 18:21:19.643335  ================================================================================
-2026-06-19 18:21:19.643335
-2026-06-19 18:21:19.643335    Backtest end date: 2026-05-10
-2026-06-19 18:21:20.450026    Loaded 2602 days of VIX data
-2026-06-19 18:21:20.450026
-2026-06-19 18:21:20.450026    Loading SPX minute data...
-  2533 trading days.  in 0.18s
-2026-06-19 18:21:20.631140    Built 2533 daily SPX bars
-2026-06-19 18:21:20.631140
-2026-06-19 18:21:20.631140  ================================================================================
-2026-06-19 18:21:20.631140  RUNNING 10-YEAR (SPX BACKTEST NET-DELTA + FIXED *5 CAPITAL)
-2026-06-19 18:21:20.631140  ================================================================================
-2026-06-19 18:21:20.631140
+2026-06-21 21:04:26.238370
+2026-06-21 21:04:26.238370  ================================================================================
+2026-06-21 21:04:26.238370  Options_Using_SPX_10_NetDelta_Fixed4.PY
+2026-06-21 21:04:26.238370  ================================================================================
+2026-06-21 21:04:26.238370
+2026-06-21 21:04:26.238370    Backtest end date: 2026-05-10
+2026-06-21 21:04:27.255492    Loaded 2602 days of VIX data
+2026-06-21 21:04:27.255492
+2026-06-21 21:04:27.255492    Loading SPX minute data...
+  2533 trading days.  in 0.19s
+2026-06-21 21:04:27.446694    Built 2533 daily SPX bars
+2026-06-21 21:04:27.446694
+2026-06-21 21:04:27.446694  ================================================================================
+2026-06-21 21:04:27.446694  RUNNING 10-YEAR (SPX BACKTEST NET-DELTA + FIXED *5 CAPITAL)
+2026-06-21 21:04:27.446694  ================================================================================
+2026-06-21 21:04:27.446694
   Period:       2016-05-09 to 2026-05-10
   STRATEGY
   ------------------------------------------------------------
@@ -29,8 +29,8 @@ C:\Neeraj\backup\tech\systematicinv\iron-condor\venv\Scripts\python.exe C:\Neera
 
   Exits:       50% profit, 10 DTE smart exit, 2x stop  (gap-aware)
 
-2026-06-19 18:21:20.638142    Running backtest...
-2026-06-19 18:21:22.033376    Complete!
+2026-06-21 21:04:27.449690    Running backtest...
+2026-06-21 21:04:28.557711    Complete!
 
   NET-DELTA MANAGEMENT
   ------------------------------------------------------------
@@ -39,7 +39,6 @@ C:\Neeraj\backup\tech\systematicinv\iron-condor\venv\Scripts\python.exe C:\Neera
     Trades that rolled at least 1x: 47
     Total PUT-side rolls:           35
     Total CALL-side rolls:          42
-    Skipped (VIX > 25):             70
 
 
 ================================================================================
@@ -54,6 +53,10 @@ SPX BACKTEST NET-DELTA + FIXED *5 CAPITAL
     Winning Trades:         283
     Losing Trades:          134
     Win Rate:               67.9%
+    Skipped (VIX > 25):     70
+    Skipped (DUP_EXP):      2415
+    Skipped (CREDIT < > -1):   0
+    Skipped (NOT_IN_UNIV):  0
 
   EXIT REASONS
   ------------------------------------------------------------
@@ -97,11 +100,11 @@ SPX BACKTEST NET-DELTA + FIXED *5 CAPITAL
     2025   46       37     80.4   % 0        $  16,546.20     44.4%
     2026   4        3      75.0   % 0        $   1,726.65      3.2%
 
-2026-06-19 18:21:22.034331
-2026-06-19 18:21:22.034331  ================================================================================
-2026-06-19 18:21:22.034331  FINAL SUMMARY - BACKTEST  (SPX BACKTEST NET-DELTA + FIXED *5 CAPITAL)
-2026-06-19 18:21:22.034331  ================================================================================
-2026-06-19 18:21:22.034331
+2026-06-21 21:04:28.558707
+2026-06-21 21:04:28.558707  ================================================================================
+2026-06-21 21:04:28.558707  FINAL SUMMARY - BACKTEST  (SPX BACKTEST NET-DELTA + FIXED *5 CAPITAL)
+2026-06-21 21:04:28.558707  ================================================================================
+2026-06-21 21:04:28.558707
   +------------------------------------------------------------+
   |      CAPITAL INVESTED:                  $18,848            |
   |         TOTAL P&L :                     $36,712            |
@@ -113,6 +116,6 @@ SPX BACKTEST NET-DELTA + FIXED *5 CAPITAL
   |   TOTAL ROLLS (PUT/CALL):                35/42             |
   +------------------------------------------------------------+
 
-2026-06-19 18:21:22.048328    Trades exported to: C:\Neeraj\backup\tech\systematicinv\iron-condor\outputs\SPX_IronCondor_10Year_NetDelta_Fixed4_Backtest.csv
+2026-06-21 21:04:28.569707    Trades exported to: C:\Neeraj\backup\tech\systematicinv\iron-condor\outputs\SPX_IronCondor_10Year_NetDelta_Fixed4_Backtest.csv
 
 Process finished with exit code 0

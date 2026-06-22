@@ -132,6 +132,10 @@ def run_backtest(start_date, delta_days, strategy, run_title):
         if potential_reentries:
             # Re-entry: ask strategy — it checks dup exp internally
             for signal in potential_reentries:
+                if not strategy.hist.is_in_universe(signal.ticker):
+                    skipped_not_in_universe += 1
+                    continue
+
                 trade_id += 1
                 new_trade = strategy.create_trade(current_date, trade_id, signal)
                 open_trades.append(new_trade)
