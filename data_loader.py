@@ -1,105 +1,39 @@
-from concurrent.futures import ProcessPoolExecutor as Executor
-from concurrent.futures import as_completed
 
 import pandas as pd
-import glob
 import os
 import time
-from config import gcfg
 
-SPX_GLOB   = os.path.join(gcfg.paths.data_path, 'spx_*.xlsx')
+SPX_CSV_PATH = "datas/SPX.csv"
 
 # ============================================================================
 # DATA LOADING
 # ============================================================================
 
 
-def load_one_file(path):
-    """Load a single SPX minute file and return (daily_dict, bars, fname)."""
-    fname = os.path.basename(path)
+def load_spx_daily_from_csv(start_year, end_year):
+    start = time.time()
 
-    try:
-        df = pd.read_excel(path)
-    except Exception as e:
-        print(f"  WARN: {fname}: {e}")
+    path = SPX_CSV_PATH  # e.g. "datas/SPX.csv" — set this constant near SPX_GLOB
+    if not os.path.exists(path):
+        print(f"  ERROR: {path} not found")
         return None
 
-    cols_lower = {c.lower(): c for c in df.columns}
-    date_col = cols_lower.get('date') or cols_lower.get('datetime')
-    if date_col is None:
-        print(f"  WARN: {fname} has no Date column")
-        return None
-
-    df[date_col] = pd.to_datetime(df[date_col])
-    df = df.set_index(date_col).between_time('09:30', '16:00')
-
-    # Normalize OHLC column names
-    for needed in ('Open', 'High', 'Low', 'Close'):
-        if needed not in df.columns:
-            low = needed.lower()
-            match = next((c for c in df.columns if c.lower() == low), None)
-            if match is None:
-                return None
-            df = df.rename(columns={match: needed})
+    # Filter by year before parallelizing
+    df = pd.read_csv(path, parse_dates=['Date'])
+    df = df[(df['Date'].dt.year >= start_year) & (df['Date'].dt.year <= end_year)]
 
     if df.empty:
         return None
 
-    bars = len(df)
-    daily_df = df.resample('1D').agg({
-        'Open': 'first', 'High': 'max', 'Low': 'min', 'Close': 'last'
-    }).dropna()
     daily = {}
-    for idx, row in daily_df.iterrows():
-        daily[idx.normalize()] = {  # Normalize idx to remove the time part
+    for _, row in df.iterrows():
+        daily[row['Date'].normalize()] = {
             'open': float(row['Open']), 'high': float(row['High']),
             'low': float(row['Low']), 'close': float(row['Close']),
         }
-    print(f"  loaded {fname}: {bars:,} bars -> {len(daily_df)} days")
-
-    return daily, bars, fname
-
-
-def load_spx_daily_from_minute_files(start_year, end_year):
-    start = time.time()
-
-    files = sorted(glob.glob(SPX_GLOB))
-    if not files:
-        print(f"  ERROR: no files matched {SPX_GLOB}")
-        return None
-
-    # Filter by year before parallelizing
-    valid_files = []
-    for path in files:
-        fname = os.path.basename(path)
-        try:
-            year = int(fname.lower().replace('spx_', '').split('.')[0])
-        except ValueError:
-            continue
-        if start_year <= year <= end_year:
-            valid_files.append(path)
-
-    daily = {}
-    total_bars = 0
-
-    # ---- PARALLEL LOAD: 2 workers ----
-
-    with Executor(max_workers=2) as ex:
-        futures = {ex.submit(load_one_file, path): path for path in valid_files}
-        for fut in as_completed(futures):
-            result = fut.result()
-            if result is None:
-                continue
-
-            daily_dict, bars, _ = result
-            total_bars += bars
-            daily.update(daily_dict)
-
-    if not daily:
-        return None
 
     elapsed = time.time() - start
-    print(f"  TOTAL: {total_bars:,} minute bars / {len(daily)} trading days.  in {elapsed:.2f}s")
+    print(f"  {len(daily)} trading days.  in {elapsed:.2f}s")
 
     return daily
 

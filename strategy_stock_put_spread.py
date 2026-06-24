@@ -13,7 +13,7 @@ from datetime import datetime
 import pandas as pd
 from backtest_engine import run_main
 from base_strategy import BaseStrategy, TradeSignal, TradeEntryReason, get_next_friday
-from CacheDailyOHLCV import CachedailyOHLCV, get_spy_ticker_list
+from CacheDailyOHLCV import CachedailyOHLCV
 from CacheEarning import EarningsCache
 from volatility import calculate_historical_volatility
 from scanner import scan
@@ -63,7 +63,10 @@ class StockPutSpreadStrategy(BaseStrategy):
     # ── BaseStrategy interface ────────────────────────────────────────────
     # ── inherited functions called by backtest_engine
     def load_data(self, start_date, delta_days):
-        sp500_list = get_spy_ticker_list()
+        sp500_list = list(self.hist.get_spy_ticker_list())
+        self.hist.universe_as_of(start_date)
+        log(f"Current tickers: {len(sp500_list)}")
+
         log(f" Loading stock price data from {start_date.date()}, delta_days={delta_days} for {len(sp500_list)} tickers...")
         cache = CachedailyOHLCV(path=gcfg.paths.yf_data_path, start_date=start_date, delta_days=delta_days)
         self.price_data = cache.download_list(sp500_list)
@@ -84,6 +87,7 @@ class StockPutSpreadStrategy(BaseStrategy):
         expiration is not already used for this ticker.  Engine creates one trade per signal.
         Called by backtest_engine_stocks.py instead of should_enter_trade().
         """
+        # TODO: move to date_utils.py
         if self.cfg.entry_weekday != "ALL":
             weekday = current_date.strftime("%A").upper()
             if weekday != self.cfg.entry_weekday.upper():
@@ -93,7 +97,7 @@ class StockPutSpreadStrategy(BaseStrategy):
         signals = []
         for ticker, price_df in self.price_data.items():
             earnings_dates = self.earnings_cache.get_earnings_dates(ticker)
-            # log(f" Loaded  {len(earnings_dates)} earnings for ticker={ticker}")
+            # print(f"DEBUG: Loaded  {len(earnings_dates)} earnings for ticker={ticker}")
             entered, strike = scan(current_date, price_df, earnings_dates, self.cfg)
             if entered:
                 if not self.check_expiration_used(current_date, ticker):
@@ -157,11 +161,11 @@ class StockPutSpreadStrategy(BaseStrategy):
         return [d for d in dates if start_date <= d <= end_date]
 
     def print_strategy_config(self):
-        log(f"  Strategy:    Stock Put Spread  (wing ${self.cfg.wing_width}, {self.cfg.target_dte} DTE)")
-        log(f"  Entry:       Day after earnings, EMA({self.cfg.ema_period}) up, RSI slope > {self.cfg.rsi_slope_min}")
-        log(f"  Support:     {self.cfg.support_lookback}-day rolling low, strike increment ${self.cfg.strike_increment}")
-        log(f"  Profit target: {int(self.cfg.profit_target * 100)}%  Stop: {self.cfg.stop_loss_mult}x credit")
-        log(f"  Capital:      ")
+        print(f"  Strategy:    Stock Put Spread  (wing ${self.cfg.wing_width}, {self.cfg.target_dte} DTE)")
+        print(f"  Entry:       Day after earnings, EMA({self.cfg.ema_period}) up, RSI slope > {self.cfg.rsi_slope_min}")
+        print(f"  Support:     {self.cfg.support_lookback}-day rolling low, strike increment ${self.cfg.strike_increment}")
+        print(f"  Profit target: {int(self.cfg.profit_target * 100)}%  Stop: {self.cfg.stop_loss_mult}x credit")
+        print(f"  Capital:      ")
 
     def print_extra_results(self, results, years):
         pass

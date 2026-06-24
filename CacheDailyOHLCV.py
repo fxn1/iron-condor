@@ -41,6 +41,7 @@ class CachedailyOHLCV:
         return df.index.max().to_pydatetime()
 
     # Creating a Function
+    # TODO: move to date_utils.py
     @staticmethod
     def check_weekday(wkdate):
         # computing the parameter date with len function
@@ -114,22 +115,3 @@ class CachedailyOHLCV:
         # return latest data as UTC
         self.df_to_utc(df)
         return df
-
-
-def get_spy_ticker_list():
-    from io import StringIO
-    import requests
-    url = 'https://en.wikipedia.org/wiki/List_of_S%26P_500_companies'
-    try:
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
-        html = requests.get(url, headers=headers).text
-        SnPwiki = pd.read_html(StringIO(html))
-        # pick columns 'ticker'
-        sp500 = SnPwiki[0].iloc[:, [0]]
-        sp500.columns = ['ticker']
-        sp500_list = sp500['ticker'].values.tolist()
-        print(f"sp500 rows {type(sp500_list)} with length {len(sp500_list)}")
-        return sp500_list
-    except Exception as e:
-        print(f"{datetime.today()} Failed to fetch S&P 500 list: {e}")
-        return []

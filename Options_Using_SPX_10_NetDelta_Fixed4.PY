@@ -21,7 +21,7 @@ import os
 from datetime import timedelta, datetime
 import pandas as pd
 from backtest_engine import run_main
-from data_loader import load_spx_daily_from_minute_files, load_vix_data_from_excel
+from data_loader import load_spx_daily_from_csv, load_vix_data_from_excel
 from base_strategy import BaseStrategy, get_next_friday,  TradeEntryReason, TradeSignal
 from volatility import calculate_historical_volatility
 from pricing import black_scholes_price, find_strike_for_delta
@@ -56,6 +56,8 @@ class Fixed4Strategy(BaseStrategy):
 
     # BaseStrategy — unified interface engine calls
     def load_data(self, start_date, delta_days):
+        self.hist.current_tickers.add(SPX_TICKER)
+        self.hist.active_tickers.add(SPX_TICKER)
         VIX_DATA_PATH = os.path.normpath(os.path.join(gcfg.paths.data_path, 'VIX_Daily_Data.xlsx'))
         if not os.path.exists(VIX_DATA_PATH):
             raise FileNotFoundError(VIX_DATA_PATH)
@@ -68,7 +70,7 @@ class Fixed4Strategy(BaseStrategy):
 
         log("  Loading SPX minute data...")
         end_date = start_date + timedelta(days=delta_days)
-        self.spx_data = load_spx_daily_from_minute_files(start_date.year, end_date.year)
+        self.spx_data = load_spx_daily_from_csv(start_date.year, end_date.year)
         if self.spx_data is None:
             log("  ERROR: could not load SPX data")
             return
@@ -151,28 +153,27 @@ class Fixed4Strategy(BaseStrategy):
         return [d for d in dates if start_date <= d <= end_date]
 
     def print_strategy_config(self):
-        log("  STRATEGY")
-        log("  " + "-" * 60)
-        log(f"  Underlying:    SPX (real 1-min data, resampled to daily)")
-        log(f"  Strategy:      18/14 delta IC, ${self.cfg.wing_width} wings, Monday entry, {self.cfg.target_dte} DTE")
-        log(f"  Roll rule:     |net delta| > {self.cfg.net_delta_roll}  (warn at +/-{self.cfg.net_delta_warn})")
-        log(f"    PUT/CALL Delta:    {self.cfg.put_delta} / {self.cfg.call_delta}")
-        log(f"    Profit Target:     {int(self.cfg.profit_target*100)}%")
-        log(f"    Stop Loss:         {self.cfg.stop_loss_multiplier}x credit per leg (worst-intraday)")
-        log(f"    10 DTE Exit:       Smart exit, gap-aware")
-        log(f"    VIX No-Trade:      > {self.cfg.vix_no_trade}")
-        log()
+        print("  STRATEGY")
+        print("  " + "-" * 60)
+        print(f"  Underlying:    SPX (real 1-min data, resampled to daily)")
+        print(f"  Strategy:      18/14 delta IC, ${self.cfg.wing_width} wings, Monday entry, {self.cfg.target_dte} DTE")
+        print(f"  Roll rule:     |net delta| > {self.cfg.net_delta_roll}  (warn at +/-{self.cfg.net_delta_warn})")
+        print(f"    PUT/CALL Delta:    {self.cfg.put_delta} / {self.cfg.call_delta}")
+        print(f"    Profit Target:     {int(self.cfg.profit_target*100)}%")
+        print(f"    Stop Loss:         {self.cfg.stop_loss_multiplier}x credit per leg (worst-intraday)")
+        print(f"    10 DTE Exit:       Smart exit, gap-aware")
+        print(f"    VIX No-Trade:      > {self.cfg.vix_no_trade}")
+        print()
 
     def print_extra_results(self, results, years):
-        log("  NET-DELTA MANAGEMENT")
-        log("  " + "-" * 60)
-        log(f"    Days in Warn band ({self.cfg.net_delta_warn}-{self.cfg.net_delta_roll}):     {results['days_in_warn']}")
-        log(f"    Days in Roll zone (>{self.cfg.net_delta_roll}):       {results['days_in_roll_zone']}")
-        log(f"    Trades that rolled at least 1x: {results['rolled_trades']}")
-        log(f"    Total PUT-side rolls:           {results['total_put_rolls']}")
-        log(f"    Total CALL-side rolls:          {results['total_call_rolls']}")
-        log(f"    Skipped (VIX > {self.cfg.vix_no_trade}):             {results['trades_skipped_vix']}")
-        log()
+        print("  NET-DELTA MANAGEMENT")
+        print("  " + "-" * 60)
+        print(f"    Days in Warn band ({self.cfg.net_delta_warn}-{self.cfg.net_delta_roll}):     {results['days_in_warn']}")
+        print(f"    Days in Roll zone (>{self.cfg.net_delta_roll}):       {results['days_in_roll_zone']}")
+        print(f"    Trades that rolled at least 1x: {results['rolled_trades']}")
+        print(f"    Total PUT-side rolls:           {results['total_put_rolls']}")
+        print(f"    Total CALL-side rolls:          {results['total_call_rolls']}")
+        print()
 
     def fill_expiration_price(self, trade):
         """Look up SPX price at expiration for reporting.  Falls back to exit price."""
