@@ -41,7 +41,6 @@ class StockPutSpreadStrategy(BaseStrategy):
         self.price_data      = {}
         self.earnings_cache  = None
         self.sorted_dates     = {}    # {ticker: [sorted list of dates in price_data]}
-        self._vol_debug_count = 0   # TODO: debug
 
     # ── BaseStrategy: ───────────────────
 

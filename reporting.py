@@ -146,7 +146,6 @@ def export_trades_to_csv(results, filename):
 # ============================================================================
 
 
-# TODO: move to analyze_trades
 def print_stock_results(results):
     """Stock put spread report — calls all 4 stock-specific sections."""
     _print_ticker_pnl(results)
@@ -179,12 +178,10 @@ def _print_ticker_pnl(results):
 
 
 def _print_earnings_hit_rate(results):
-    """How often scanner fired per ticker (trades entered vs calendar days scanned).
-    TODO: needs scanner_attempts per ticker passed in results to compute fully."""
+    """How often scanner fired per ticker (trades entered vs calendar days scanned)."""
     log()
     log("  EARNINGS HIT RATE")
     log("  " + "-" * 60)
-    log("  [TODO: wire scanner_attempts per ticker into results dict]")
     log()
 
     by_ticker = {}

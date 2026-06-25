@@ -11,7 +11,6 @@ class PutSpreadTrade(OneSidedSpreadTrade):
     def option_type(self):
         return 'put'
 
-    # TODO: if some derived classes don't need target_delta, consider refactoring to avoid forcing them to implement it.
     def target_delta(self):
         # Stock put spreads use support-based strikes, not delta targeting.
         # This is only reached if roll_side is ever called — not expected

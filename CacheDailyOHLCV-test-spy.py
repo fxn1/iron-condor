@@ -6,7 +6,8 @@
 import os
 import time
 from datetime import datetime, date
-from CacheDailyOHLCV import CachedailyOHLCV, get_spy_ticker_list
+from CacheDailyOHLCV import CachedailyOHLCV
+from snp500_ticker_hist import Snp500TickerHist
 from config import gcfg
 
 
@@ -29,7 +30,9 @@ def run():
     START_DATE = date.fromisoformat("2000-01-01")
     delta_days = 365*30
 
-    sp500_list = get_spy_ticker_list()
+    hist = Snp500TickerHist()
+    sp500_list = list(hist.get_spy_ticker_list())
+    print(f"Current tickers: {len(sp500_list)}")
     cyf = CachedailyOHLCV(gcfg.paths.yf_data_path, START_DATE, delta_days)
     print("{} start {} download".format(datetime.today(), "spy_list"))
     cyf.download_list(sp500_list)

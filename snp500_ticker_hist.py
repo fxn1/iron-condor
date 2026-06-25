@@ -7,9 +7,18 @@ constituents table and the "Selected changes to the list of S&P 500
 components" table on the same page.
 
 class Snp500TickerHist:
-    get_spy_ticker_list()      — fetch + cache current tickers (with Date added)
-    update_universe(current_date) — apply any add/remove events on/before current_date
-    is_in_universe(ticker)     — True if ticker is currently in the cached set
+    get_spy_ticker_list()       — fetch current tickers + date_added + changes log
+    universe_as_of(target_date) — compute and cache the active universe as of target_date
+    update_universe(current_date) — add/remove events on current_date to active_tickers
+    is_in_universe(ticker)      — True if ticker is in the cached active_tickers set
+
+Two distinct sets are maintained:
+    current_tickers — full historical superset (today's list; used by callers
+                       that need every ticker ever active, e.g. price data loading)
+    active_tickers  — point-in-time active set, advanced via universe_as_of()
+                       then update_universe(); used by is_in_universe() to gate
+                       new trade entry only — exits/other activity should use
+                       current_tickers / price_data directly, not this gate.
 """
 
 from datetime import datetime, date
@@ -28,9 +37,10 @@ def log(msg=""):
 
 class Snp500TickerHist:
     def __init__(self):
-        self.current_tickers = set()        # cached full ticker set as of start_date
-        self.active_tickers = set()         # cached active ticker set, update_universe() keeps it current on each date
-        self.changes = {}                   # sorted list of date --> (added:list[str], removed:list[str])
+        self.current_tickers = set()   # full historical superset (today's live list)
+        self.active_tickers = set()    # point-in-time active set, used by is_in_universe()
+        self.date_added = {}           # {ticker: date} — only for tickers active today
+        self.changes = {}              # sorted list of {date: [added_tickers, removed_tickers]}
 
     # ── PUBLIC API ──────────────────────────────────────────────────────
 
@@ -38,7 +48,7 @@ class Snp500TickerHist:
         """
         Fetch current S&P 500 constituents + their 'Date added', and the
         'Selected changes' table, from Wikipedia. Caches both internally.
-        Returns the list of current tickers (same contract as before).
+        Returns the current ticker set.
         """
         try:
             html = requests.get(WIKI_URL, headers=HEADERS, timeout=30).text
@@ -59,24 +69,26 @@ class Snp500TickerHist:
         added_col  = self._match_col(const_table, 'Date added')
 
         self.current_tickers = set(const_table[symbol_col].astype(str).str.strip().tolist())
-        self.active_tickers = set(const_table[symbol_col].astype(str).str.strip().tolist())
 
         if added_col is not None:
             for _, row in const_table.iterrows():
                 t = str(row[symbol_col]).strip()
                 dt = pd.to_datetime(row[added_col], errors='coerce')
+                if pd.notna(dt):
+                    self.date_added[t] = dt.date()
 
         # ── table 2: selected changes ─────────────────────────────────
         changes_table = self._find_table(tables, required_cols=['Date', 'Added', 'Removed'])
         if changes_table is None:
-            log("WARN: could not find 'Selected changes' table — update_universe() will be a no-op")
+            log("WARN: could not find 'Selected changes' table — universe_as_of()/update_universe() will be no-ops")
         else:
             self._parse_changes_table(changes_table)
         return self.current_tickers
 
     def update_universe(self, input_date) -> None:
         """
-        Apply any add/remove events whose date is == input_date. Mutates self.active_tickers in place.
+        add/remove events whose date exactly matches current_date to self.active_tickers. Must be called once per date, in date order,
+        from the caller's date loop, after universe_as_of() has initialized self.active_tickers to the loop's start_date.
         """
         added_tickers, removed_tickers = self.changes.get(self._to_date(input_date), ([], []))
         for t in added_tickers:
@@ -85,10 +97,28 @@ class Snp500TickerHist:
             self.active_tickers.discard(t)
 
     def universe_as_of(self, target_date: datetime = datetime.max):
+        """
+        Compute the active universe as of target_date.
+
+        Primary method: roll self.current_tickers (today's superset) backward through changes, reversing each event with date > target_date.
+
+        Fallback refinement: for tickers with a known date_added (i.e. still active today), if date_added > target_date, the ticker could not have
+        been active yet — drop it even if changes didn't cover that far back.
+
+        Caches the result in self.active_tickers and returns it.
+        """
+        target = self._to_date(target_date)
+        self.active_tickers = self.current_tickers
+
         for dt in sorted(self.changes.keys(), reverse=True):
-            if dt <= self._to_date(target_date):
+            if dt <= target:
                 break
             self.reverse_update_universe(dt)
+
+        # refine using date_added where self.changes doesn't reach far enough back
+        for t, dt in self.date_added.items():
+            if dt > target:
+                self.active_tickers.discard(t)
 
     def reverse_update_universe(self, input_date):
         """
@@ -103,8 +133,8 @@ class Snp500TickerHist:
             self.active_tickers.add(t)
             self.current_tickers.add(t)
 
-
     def is_in_universe(self, ticker: str) -> bool:
+        """True if ticker is in the current point-in-time active set. Use only to gate new trade entry."""
         return ticker in self.active_tickers
 
     # ── INTERNAL HELPERS ────────────────────────────────────────────────
@@ -134,13 +164,11 @@ class Snp500TickerHist:
 
     def _parse_changes_table(self, table):
         """
-        Parse the 'Selected changes' table into self.
-        changes, a dict mapping date -> [added_tickers, removed_tickers].
-
+        Parse the 'Selected changes' table into changes, a dict mapping date -> [added_tickers, removed_tickers]. Merges rows
+        that share the same date instead of overwriting.
         Wikipedia's table typically has columns like:
         Date | Added (Ticker) | Added (Security) | Removed (Ticker) | Removed (Security) | Reason
-        Column matching is done by substring, not position, to tolerate
-        minor header changes.
+        Column matching is done by substring, not position, to tolerate minor header changes.
         """
         date_col    = self._match_col(table, 'Date')
         added_col   = self._match_col(table, 'Added')
@@ -164,7 +192,7 @@ class Snp500TickerHist:
                 self.changes[key][0].extend(added_tickers)
                 self.changes[key][1].extend(removed_tickers)
             else:
-                self.changes[dt.date()] = [added_tickers, removed_tickers]
+                self.changes[key] = [added_tickers, removed_tickers]
             # log(f"date={d.date()} -> [added = {added_tickers}, removed = {removed_tickers}]")
         log(f"S&P 500 change events change events loaded: {len(self.changes)}")
 

@@ -7,7 +7,7 @@ executing the full backtest loop. Prints all signals with
 strike, credit estimate, and expiration.
 
 Usage:
-    venv\scripts\python.exe run_scanner.py --days 10 --end_date 2026-06-10  # scans last 10 days ending on 2026-06-10
+    venv\\scripts\\python.exe run_scanner.py --days 10 --end_date 2026-06-10  # scans last 10 days ending on 2026-06-10
 """
 
 import argparse
@@ -24,15 +24,29 @@ def log(msg=""):
     print(f"{datetime.now()}  {msg}")
 
 
+def print_raw_scan_signals(strategy, scan_dates, cfg):
+    """Call scan() directly for every ticker/date, bypassing pricing/filters, for visibility."""
+    from scanner import scan
+    for cur_date in scan_dates:
+        for ticker, price_df in strategy.price_data.items():
+            earnings_dates = strategy.earnings_cache.get_earnings_dates(ticker)
+            entered, strike = scan(cur_date, price_df, earnings_dates, cfg)
+            if entered:
+                print(f"   {cur_date.date()} {ticker} ENTER at strike {strike}")
+
 def scan_date(strategy, current_date, cfg):
     """Scan all tickers for a single date. Returns list of signal dicts."""
     signals = []
 
+    skipped_not_in_universe = 0
     trade_id = 0
     for signal in strategy.should_enter_trades(current_date):
         if signal.reason != TradeEntryReason.SHOULD_ENTER:
             continue
 
+        if not strategy.hist.is_in_universe(signal.ticker):
+            skipped_not_in_universe += 1
+            continue
         trade_id += 1
         new_trade = strategy.create_trade(current_date, trade_id, signal)
 
@@ -60,7 +74,7 @@ def scan_date(strategy, current_date, cfg):
 
 def main():
     parser = argparse.ArgumentParser(description='Stock put spread daily scanner')
-    parser.add_argument('--days',  type=int, default=20,    help='Number of past trading days to scan (default: 20)')
+    parser.add_argument('--days',  type=int, default=30,    help='Number of past trading days to scan (default: 20)')
     parser.add_argument('--end_date',  type=str, default=None, help='Scan days before end_date (YYYY-MM-DD)')
     args = parser.parse_args()
 
@@ -92,28 +106,29 @@ def main():
         log(f" {d.date()} → {len(day_signals)} signals")
 
     # ── print results ────────────────────────────────────────────────────
-    log()
-    log("=" * 90)
-    log("  SCANNER SIGNALS")
-    log("=" * 90)
+    print()
+    print("=" * 90)
+    print("  SCANNER SIGNALS")
+    print("=" * 90)
 
+    print_raw_scan_signals(strategy, scan_dates, cfg)
     if not all_signals:
         log("  No signals found.")
         return
 
     # header
-    log(f"  {'Date':<12} {'Ticker':<8} {'Price':>8} {'Short':>7} {'Long':>6} {'OTM%':>6} {'Credit':>7} {'MaxLoss':>8} {'Expiration':<12} {'DTE':>4} {'Vol10d':>12}")
-    log(f"  {'-'*12} {'-'*8} {'-'*8} {'-'*7} {'-'*6} {'-'*6} {'-'*7} {'-'*8} {'-'*12} {'-'*4} {'-'*12}")
+    print(f"  {'Date':<12} {'Ticker':<8} {'Price':>8} {'Short':>7} {'Long':>6} {'OTM%':>6} {'Credit':>7} {'MaxLoss':>8} {'Expiration':<12} {'DTE':>4} {'Vol10d':>12}")
+    print(f"  {'-'*12} {'-'*8} {'-'*8} {'-'*7} {'-'*6} {'-'*6} {'-'*7} {'-'*8} {'-'*12} {'-'*4} {'-'*12}")
 
     for s in sorted(all_signals, key=lambda x: (x['Date'], x['Ticker'])):
-        log(f"  {s['Date']:<12} {s['Ticker']:<8} {s['Price']:>8.2f} {s['Short']:>7.0f} {s['Long']:>6.0f} {s['OTM%']:>5.1f}% {s['Credit']:>7.2f} {s['Max_Loss']:>8.2f} {s['Expiration']:<12} {s['DTE']:>4} {s['Vol_10d']:>12,}")
-    log()
-    log(f"  Total signals: {len(all_signals)} across {len(scan_dates)} trading days")
-    log()
+        print(f"  {s['Date']:<12} {s['Ticker']:<8} {s['Price']:>8.2f} {s['Short']:>7.0f} {s['Long']:>6.0f} {s['OTM%']:>5.1f}% {s['Credit']:>7.2f} {s['Max_Loss']:>8.2f} {s['Expiration']:<12} {s['DTE']:>4} {s['Vol_10d']:>12,}")
+    print()
+    print(f"  Total signals: {len(all_signals)} across {len(scan_dates)} trading days")
+    print()
 
     # ── summary by date ──────────────────────────────────────────────────
-    log("  SIGNALS PER DAY")
-    log(f"  {'-'*40}")
+    print("  SIGNALS PER DAY")
+    print(f"  {'-'*40}")
     df = pd.DataFrame(all_signals)
     by_date = df.groupby('Date').agg(
         Signals   = ('Ticker',  'count'),
@@ -122,8 +137,8 @@ def main():
         Tickers   = ('Ticker',  lambda x: ', '.join(sorted(x)))
     ).round(2)
     for date, row in by_date.iterrows():
-        log(f"  {date}  {row['Signals']:>3} signals avg OTM {row['Avg_OTM']:.1f}%  avg credit ${row['Avg_Credit']:.2f}")
-        log(f"    {row['Tickers']}")
+        print(f"  {date}  {row['Signals']:>3} signals avg OTM {row['Avg_OTM']:.1f}%  avg credit ${row['Avg_Credit']:.2f}")
+        print(f"    {row['Tickers']}")
     log()
 
 

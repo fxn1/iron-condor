@@ -2,11 +2,9 @@
 """
 scanner.py — entry signal scanner for stock put spread backtest.
 
-Single responsibility: given a date and a ticker's price history +
-earnings calendar, decide whether to enter a trade today and return
-the strike price if so.
+Single responsibility: given a date and a ticker's price history + earnings calendar, decide whether to enter a trade today and return the strike price if so.
 
-not in the logic below.
+use run_scanner to test
 """
 
 from datetime import timedelta, date, datetime
@@ -75,7 +73,6 @@ def _find_support(close: pd.Series, scanner_cfg) -> Optional[float]:
     return float(close.rolling(scanner_cfg.support_lookback).min().iloc[-1])
 
 
-# TODO : use the pricing functions to get strike for a given delta instead of this. this is just a rough approximation and may not be accurate enough for backtesting.
 def _nearest_strike_below(price: float, increment: float) -> float:
     """Largest strike that is a multiple of increment and <= price."""
     import math
@@ -141,46 +138,3 @@ def scan(current_date: datetime, price_df: pd.DataFrame, earnings_dates: list[da
     if strike <= 0:
         return False, None
     return True, strike
-
-
-if __name__ == "__main__":
-    from CacheDailyOHLCV import CachedailyOHLCV, get_spy_ticker_list
-    from CacheEarning import EarningsCache
-    from config import gcfg
-    from datetime import datetime
-
-    start_date = datetime(2025, 5, 1)
-    delta_days = 365 * 4
-    end_date = start_date + timedelta(days=delta_days + 1)  # +1 to include the last day in the loop
-
-    sp500_list = get_spy_ticker_list()
-    # sp500_list = ['MMM']  # TODO: expand as needed
-    cache = CachedailyOHLCV(path=gcfg.paths.yf_data_path, start_date=start_date, delta_days=delta_days)
-    sorted_dates = {}  # {ticker: [sorted list of dates in price_data]}
-    for ticker in sp500_list:
-        df = cache.get_cache(ticker)
-        sorted_dates[ticker] = sorted(pd.to_datetime(df.index).normalize().tolist())
-
-    sorted_dates = next(iter(sorted_dates.values()))
-    # dates = [pd.Timestamp(d) for d in sorted_dates]
-    # dates = [d for d in dates if start_date <= d <= end_date]
-    dates = [datetime(2026, 4, 22)]   # hardcode for testing
-
-    print("  Loading earnings data...")
-    earnings_cache = EarningsCache(path=gcfg.paths.yf_data_path)
-    # earnings_cache.download_list(sp500_list)  # TODO: update manually for now
-    earnings_data = {t: earnings_cache.get_earnings_dates(t) for t in sp500_list}
-    print(f"  ✓ Loaded earnings for {len(earnings_data)} tickers")
-
-    stock_cfg = gcfg.stocks
-    ii = 0
-    for cur_date in dates:
-        for ticker in sp500_list:
-            df = cache.get_cache(ticker)
-            earnings_dt = earnings_cache.get_earnings_dates(ticker)  # TODO: fix scanner
-            entered, stk_strike = scan(cur_date, df, earnings_dt, stock_cfg)
-            if entered:
-                print(f"{cur_date.date()} {ticker} ENTER at strike {stk_strike}")
-                ii += 1
-                if ii > 10:
-                    break
