@@ -109,7 +109,7 @@ def scan(current_date: datetime, price_df: pd.DataFrame, earnings_dates: list[da
             return False, None
 
     # ── slice history up to and including current_date ───────────────────
-    history = price_df[price_df.index <= current_date]
+    history = price_df[price_df.index < current_date]
     if history.empty:
         return False, None
 

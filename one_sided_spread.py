@@ -35,7 +35,7 @@ class OneSidedSpreadTrade(Trade):
 
     # TODO: move to common util
     def volume_10median(self, entry_date, spx_price_df):
-        hist10 = spx_price_df[spx_price_df.index <= entry_date].tail(10)
+        hist10 = spx_price_df[spx_price_df.index < entry_date].tail(10)
         return int(hist10['Volume'].median()) if len(hist10) >= 10 else 0
 
     # ============================================================
