@@ -108,7 +108,7 @@ class Snp500TickerHist:
         Caches the result in self.active_tickers and returns it.
         """
         target = self._to_date(target_date)
-        self.active_tickers = self.current_tickers
+        self.active_tickers = set(self.current_tickers)
 
         for dt in sorted(self.changes.keys(), reverse=True):
             if dt <= target:

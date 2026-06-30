@@ -50,9 +50,9 @@ class StockPutSpreadStrategy(BaseStrategy):
         if ts not in dates:
             return 0.18
         idx = dates.index(ts)
-        if idx >= 20:
+        if idx >= 21:   # 21 prior closes -> 20 returns; excludes entry day (roc 18% -> 7%)
             df = self.price_data[ticker]
-            window = dates[idx - 20: idx + 1]
+            window = dates[idx - 21: idx]   # 21 prior closes -> 20 returns; excludes entry day (roc 18% -> 7%)
             hist = [float(df.loc[d, 'Close']) for d in window]
             hv = calculate_historical_volatility(hist)
             vol = hv * self.cfg.vol_scalar
@@ -62,8 +62,9 @@ class StockPutSpreadStrategy(BaseStrategy):
     # ── BaseStrategy interface ────────────────────────────────────────────
     # ── inherited functions called by backtest_engine
     def load_data(self, start_date, delta_days):
-        sp500_list = list(self.hist.get_spy_ticker_list())
+        list(self.hist.get_spy_ticker_list())
         self.hist.universe_as_of(start_date)
+        sp500_list = self.hist.current_tickers
         log(f"Current tickers: {len(sp500_list)}")
 
         log(f" Loading stock price data from {start_date.date()}, delta_days={delta_days} for {len(sp500_list)} tickers...")
@@ -76,7 +77,12 @@ class StockPutSpreadStrategy(BaseStrategy):
 
         # precompute sorted date lists per ticker for vol lookback
         for ticker, df in self.price_data.items():
-            self.sorted_dates[ticker] = sorted(df.index.normalize().tolist())
+            if df.empty:
+                continue
+
+            idx = pd.to_datetime(df.index, errors="coerce")
+            idx = idx[pd.notna(idx)]
+            self.sorted_dates[ticker] = sorted(idx.normalize().tolist())
 
     # ── scan all tickers for today (called by stock engine, not SPX engine) ─
     def should_enter_trades(self, current_date) -> list[TradeSignal]:
@@ -95,6 +101,8 @@ class StockPutSpreadStrategy(BaseStrategy):
             return [TradeSignal(reason=TradeEntryReason.SKIPPED_VIX)]
         signals = []
         for ticker, price_df in self.price_data.items():
+            if current_date not in price_df.index:
+                continue
             earnings_dates = self.earnings_cache.get_earnings_dates(ticker)
             # print(f"DEBUG: Loaded  {len(earnings_dates)} earnings for ticker={ticker}")
             entered, strike = scan(current_date, price_df, earnings_dates, self.cfg)
@@ -155,7 +163,7 @@ class StockPutSpreadStrategy(BaseStrategy):
         }
 
     def get_trading_dates(self, start_date, end_date) -> list:
-        sorted_dates = next(iter(self.sorted_dates.values()))
+        sorted_dates = sorted({d for dates in self.sorted_dates.values() for d in dates})
         dates = [pd.Timestamp(d) for d in sorted_dates]
         return [d for d in dates if start_date <= d <= end_date]
 
