@@ -10,6 +10,8 @@ calls these methods; the SPX engine is untouched.
 """
 
 from datetime import datetime
+from typing import Optional
+
 import pandas as pd
 from backtest_engine import run_main
 from base_strategy import BaseStrategy, TradeSignal, TradeEntryReason, get_next_friday
@@ -145,17 +147,30 @@ class StockPutSpreadStrategy(BaseStrategy):
             cfg               = self.cfg,
         )
 
-    def get_market_data(self, trade, ts: pd.Timestamp) -> dict:
+    def get_market_data(self, trade, ts: pd.Timestamp) -> Optional[dict]:
         ticker     = trade.ticker
         df         = self.price_data[ticker]
-        row        = df.loc[ts] if ts in df.index else None
-        close      = float(row['Close']) if row is not None else 0.0
+        if ts in df.index:
+            row   = df.loc[ts]
+            close = float(row['Close'])
+            high  = float(row['High'])
+            low   = float(row['Low'])
+            opn   = float(row['Open'])
+        else:
+            # no bar today (halt/gap): carry the last close forward instead of
+            # marking at 0.0, which fabricated a max-loss stop; flatten OHLC to
+            # the carried close so stale intraday extremes can't trigger exits
+            prior = df[df.index < ts]
+            if prior.empty:
+                return None    # no usable data at all — engine skips this trade today
+            close = float(prior['Close'].iloc[-1])
+            high = low = opn = close
         volatility = self._volatility(ticker, ts)
         return {
             'close':      close,
-            'high':       float(row['High'])  if row is not None else close,
-            'low':        float(row['Low'])   if row is not None else close,
-            'open':       float(row['Open'])  if row is not None else close,
+            'high':       high,
+            'low':        low,
+            'open':       opn,
             'vix':        0.0,
             'volatility': volatility,
             'put_vol':    volatility * 1.10,
