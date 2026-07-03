@@ -89,6 +89,8 @@ def run_backtest(start_date, delta_days, strategy, run_title):
         trades_to_close = []
         for trade in open_trades:
             md = strategy.get_market_data(trade, current_date)
+            if md is None:   # no usable price data for this trade today
+                continue
             close       = md['close']
             day_high    = md['high']
             day_low     = md['low']
@@ -105,6 +107,8 @@ def run_backtest(start_date, delta_days, strategy, run_title):
             if not trade.is_open:
                 continue
             md = strategy.get_market_data(trade, current_date)
+            if md is None:   # no usable price data for this trade today
+                continue
             close       = md['close']
             put_vol     = md['put_vol']
             call_vol    = md['call_vol']
@@ -171,7 +175,7 @@ def run_backtest(start_date, delta_days, strategy, run_title):
     # Force-close anything still open at end of period
     for trade in open_trades:
         md = strategy.get_market_data(trade, dates[-1])
-        spx_price = md['close']
+        spx_price = md['close'] if md is not None else trade.spx_price_at_entry
         trade._close_at_expiration(spx_price)
         closed_trades.append(trade)
 

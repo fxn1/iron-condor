@@ -154,3 +154,55 @@ pip install -e .[dev]
 14. Naming is slightly inconsistent: `Fixed4Strategy`, `Fixed4` filenames, and comments mention fixed 4 in places, but the active capital assumption is fixed 5 concurrent trades.
 15. `pyproject.toml` contains mojibake in comments, likely from an encoding mismatch. It probably still parses, but the comments render poorly.
 16. `NetDeltaStrategy` - wire  `IronCondorTradeOpen` behavior `create_trade()`.
+
+## Backtest Validity Review — Bias Findings & Suggested Fixes (2026-07-03)
+
+Review of `strategy_stock_put_spread.py` and its execution path for lookahead and survivorship bias.
+Signal path is clean: scanner slices `price_df.index < current_date`, entry volatility uses the 21 prior
+closes excluding entry day, stops fill at the intraday worst (pessimistic). Remaining issues, by impact:
+
+### Correctness bugs
+
+1. **End-of-backtest trades are zeroed out.** `OneSidedSpreadTrade._close_at_expiration()` is a no-op `pass`,
+   so trades still open at the end of the run land in `closed_trades` with `Total_PnL_$ = 0` and no exit reason
+   (confirmed: 3 of 681 trades in `Stock_Put_Spread_Backtest.csv` — TYL, J, UBER). Fix: mark to market at the
+   final observed price (engine already has `md` in hand at the force-close loop), or exclude them from stats
+   and report them as "open at end".
+2. **Missing bar → `close = 0.0` → fake max-loss stop.** `get_market_data()` returns 0.0 when the ticker has no
+   bar on a date (trading calendar is the union of all tickers). A spread marked at S=0 instantly "stops out"
+   at near-max loss. Did **not** fire in the current run (verified: no Stop Loss exits at price 0 or <50% of
+   entry), but it is latent. Fix: carry forward the last available close (a halted stock can't be exited that
+   day anyway) and have the engine skip exit checks when no bar exists; assert `SPX_Exit > 0` at close time.
+
+### Survivorship bias (the main credibility risk)
+
+3. **Delisted tickers have no yfinance data.** The point-in-time universe (`Snp500TickerHist`) is correct, but
+   `CachedailyOHLCV` silently returns empty for tickers Yahoo no longer serves — exactly the removed/bankrupt/
+   acquired names most likely to blow through a put spread. The backtest effectively trades only survivors.
+   Fix: in `load_data()`, reconcile universe vs. loaded data and log tickers with no price data and tickers
+   with no earnings data. Longer term, backfill delisted names from a survivorship-free source (Sharadar,
+   Norgate, EODHD) — the cache is CSV-file-based, so vendor files can be dropped into `yf_data_path` directly.
+4. **Earnings coverage compounds it.** Entry *requires* an earnings-date match, but the earnings cache is a
+   manual snapshot of currently-fetchable tickers; `get_earnings_dates()` returns `[]` for missing files, which
+   `scan()` treats as "no signal". Fix: download earnings over the historical superset (`current_tickers` after
+   `universe_as_of()`), and add a `SKIPPED_NO_EARNINGS` signal reason so the exclusion shows up in run stats
+   instead of masquerading as no-signal. Note `get_earnings_dates(limit=20)` only reaches ~5 years back from
+   the download date.
+
+### Lookahead / realism (milder)
+
+5. **Friday reporters are never entered.** Gate 1 checks `current_date - timedelta(days=1)`, so Friday earnings
+   never match on Monday. Fix: compare against the previous *trading day* from the ticker's own index (also
+   handles holidays).
+6. **`auto_adjust=True` prices embed future dividends/splits.** Strikes from `_nearest_strike_below()` and BSM
+   premiums are computed on adjusted prices, which don't map to real historical strikes and slightly misprice
+   puts on dividend payers. Options: document and accept (second-order for a synthetic-pricing backtest), or
+   use raw `Close` for strikes/spot/premiums and adjusted close only for EMA/RSI/support indicators.
+7. **Earnings calendar is as-known-today.** Live trading would occasionally act on a moved date. Minor.
+
+### Methodology
+
+8. **In-sample tuning.** Parameters (`vol_scalar`, stop mult, DTE) have been tuned against the same 2022–2026
+   ROC (see commit history). Split the window — tune on 2022–2024, report 2025–2026 untouched. All P&L is
+   synthetic (BSM on scaled HV, no real quotes); spot-check a few trades against actual historical option
+   prices to sanity-check `vol_scalar = 0.80`, since that single constant scales every credit and hence ROC.

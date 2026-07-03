@@ -32,6 +32,8 @@ class OneSidedSpreadTrade(Trade):
         self.leg_pnl = 0.0
         self.leg_exit_reason = None
         self.profit_target_amount = credit * cfg.profit_target
+        self.last_mark_date = entry_date      # last date the trade was marked (for end-of-backtest close)
+        self.last_volatility = 0.30
 
     # TODO: move to common util
     def volume_10median(self, entry_date, spx_price_df):
@@ -111,6 +113,8 @@ class OneSidedSpreadTrade(Trade):
         T = max(dte / 365.0, 0.001)
         r = gcfg.market.risk_free_rate
         vol = volatility
+        self.last_mark_date = current_date
+        self.last_volatility = volatility
 
         pnl_high = self._spread_pnl(day_high, T, r, vol)
         pnl_low = self._spread_pnl(day_low, T, r, vol)
@@ -143,4 +147,11 @@ class OneSidedSpreadTrade(Trade):
         return False
 
     def _close_at_expiration(self, price):
-        pass
+        """Force-close at end of backtest: mark the spread to market at the
+        last observed price so unrealized P&L is not dropped."""
+        if not self.is_open:
+            return
+        dte = max((self.expiration_date - self.last_mark_date).days, 0)
+        T = max(dte / 365.0, 0.001)
+        pnl = self._spread_pnl(price, T, gcfg.market.risk_free_rate, self.last_volatility)
+        self._close_trade(pnl, "End of Backtest", self.last_mark_date, price)
