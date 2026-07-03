@@ -1,20 +1,20 @@
 C:\Neeraj\backup\tech\systematicinv\iron-condor\venv\Scripts\python.exe C:\Neeraj\backup\tech\systematicinv\iron-condor\strategy_stock_put_spread.py
-2026-06-21 21:06:20.231429
-2026-06-21 21:06:20.231429  ================================================================================
-2026-06-21 21:06:20.231429  Scanner_Put_Spread.py
-2026-06-21 21:06:20.231429  ================================================================================
-2026-06-21 21:06:20.231429
-2026-06-21 21:06:20.231429    Backtest end date: 2026-05-11
-2026-06-21 21:06:21.213346  S&P 500 change events change events loaded: 299
-2026-06-21 21:06:21.214360  Current tickers: 503
-2026-06-21 21:06:21.214360   Loading stock price data from 2022-06-01, delta_days=1439 for 503 tickers...
-2026-06-21 21:08:26.630972 503 end download
-2026-06-21 21:08:26.630972    ✓ Loaded 503 tickers
-2026-06-21 21:08:31.938935
-2026-06-21 21:08:31.938935  ================================================================================
-2026-06-21 21:08:31.938935  RUNNING 10-YEAR (PUT SPREAD ON STOCKS)
-2026-06-21 21:08:31.938935  ================================================================================
-2026-06-21 21:08:31.938935
+2026-06-30 08:16:41.234909
+2026-06-30 08:16:41.234909  ================================================================================
+2026-06-30 08:16:41.234909  Scanner_Put_Spread.py
+2026-06-30 08:16:41.234909  ================================================================================
+2026-06-30 08:16:41.234909
+2026-06-30 08:16:41.234909    Backtest end date: 2026-05-11
+2026-06-30 08:16:42.381114  S&P 500 change events change events loaded: 302
+2026-06-30 08:16:42.381114  Current tickers: 578
+2026-06-30 08:16:42.381114   Loading stock price data from 2022-06-01, delta_days=1439 for 578 tickers...
+2026-06-30 08:18:59.855323 578 end download
+2026-06-30 08:18:59.855323    ✓ Loaded 578 tickers
+2026-06-30 08:19:07.426154
+2026-06-30 08:19:07.426154  ================================================================================
+2026-06-30 08:19:07.426154  RUNNING 10-YEAR (PUT SPREAD ON STOCKS)
+2026-06-30 08:19:07.426154  ================================================================================
+2026-06-30 08:19:07.426154
   Period:       2022-06-01 to 2026-05-11
   Strategy:    Stock Put Spread  (wing $10, 60 DTE)
   Entry:       Day after earnings, EMA(20) up, RSI slope > 0.5
@@ -23,9 +23,9 @@ C:\Neeraj\backup\tech\systematicinv\iron-condor\venv\Scripts\python.exe C:\Neera
   Capital:
   Exits:       50% profit, 10 DTE smart exit, 2x stop  (gap-aware)
 
-2026-06-21 21:08:31.944896    Running backtest...
-[X] Series has 18 rows but indicator requires at least 20. Returning None.
-2026-06-21 21:31:05.084652    Complete!
+2026-06-30 08:19:08.100683    Running backtest...
+[X] Series has 17 rows but indicator requires at least 20. Returning None.
+2026-06-30 08:43:07.813736    Complete!
 
 
 ================================================================================
@@ -34,68 +34,68 @@ PUT SPREAD ON STOCKS
 
   TRADE STATISTICS
   ------------------------------------------------------------
-    Total Trades:           868
-    Monday Entries:         868
+    Total Trades:           681
+    Monday Entries:         681
     Re-entry Trades:        0
-    Winning Trades:         824
-    Losing Trades:          36
-    Win Rate:               94.9%
+    Winning Trades:         622
+    Losing Trades:          56
+    Win Rate:               91.3%
     Skipped (VIX > -1):     0
     Skipped (DUP_EXP):      989
-    Skipped (CREDIT < > 0.5):   926
-    Skipped (NOT_IN_UNIV):  144
+    Skipped (CREDIT < > 0.5):   877
+    Skipped (NOT_IN_UNIV):  110
 
   EXIT REASONS
   ------------------------------------------------------------
-    Profit Target                        824 ( 94.9%)
-    Stop Loss                             35 (  4.0%)
-    Unknown                                8 (  0.9%)
-    Expiration                             1 (  0.1%)
+    Profit Target                        622 ( 91.3%)
+    Stop Loss                             46 (  6.8%)
+    Expiration                            10 (  1.5%)
+    Unknown                                3 (  0.4%)
 
   PROFIT & LOSS
   ------------------------------------------------------------
-    Total P&L:              $22,848.21
-    Gross Profit:           $31,532.07
-    Gross Loss:             $-8,683.85
-    Profit Factor:          3.63
-    Avg Win:                $38.27
-    Avg Loss:               $-241.22
-    Max Drawdown:           $1,110.85
+    Total P&L:              $7,102.69
+    Gross Profit:           $26,729.15
+    Gross Loss:             $-19,626.46
+    Profit Factor:          1.36
+    Avg Win:                $42.97
+    Avg Loss:               $-350.47
+    Max Drawdown:           $3,932.74
 
   CAPITAL ANALYSIS
   ------------------------------------------------------------
-    Avg Credit/Trade:       $1.15 (incl. rolls)
-    Margin per Contract:    $885.07
-    Peak Observed:          23  ( matches observed peak)
-    Annual P&L:             $5,799.38
+    Avg Credit/Trade:       $1.42 (incl. rolls)
+    Margin per Contract:    $858.24
+    Peak Observed:          24  ( matches observed peak)
+    Annual P&L:             $1,802.82
 
 
   YEARLY BREAKDOWN
   ------------------------------------------------------------
     Year   Trades   Wins   Win%     Rolls    P&L            ROC
     ------ -------- ------ -------- -------- -------------- ----------
-    2022   112      110    98.2   % 0        $   3,493.66     17.2%
-    2023   156      148    94.9   % 0        $   3,493.53     14.6%
-    2024   215      208    96.7   % 0        $   5,884.82     21.5%
-    2025   278      264    95.0   % 0        $   7,857.39     23.6%
-    2026   107      94     87.9   % 0        $   2,118.81      5.2%
+    2022   86       84     97.7   % 0        $   2,351.33     11.4%
+    2023   110      100    90.9   % 0        $     570.82      2.5%
+    2024   171      156    91.2   % 0        $   2,252.91      9.6%
+    2025   218      197    90.4   % 0        $     869.89      3.4%
+    2026   96       85     88.5   % 0        $   1,057.74      4.0%
 
-2026-06-21 21:31:05.089955
-2026-06-21 21:31:05.089955  ================================================================================
-2026-06-21 21:31:05.089955  FINAL SUMMARY - BACKTEST  (PUT SPREAD ON STOCKS)
-2026-06-21 21:31:05.089955  ================================================================================
-2026-06-21 21:31:05.089955
+2026-06-30 08:43:07.823224
+2026-06-30 08:43:07.824195  ================================================================================
+2026-06-30 08:43:07.824195  FINAL SUMMARY - BACKTEST  (PUT SPREAD ON STOCKS)
+2026-06-30 08:43:07.824195  ================================================================================
+2026-06-30 08:43:07.824195
   +------------------------------------------------------------+
-  |      CAPITAL INVESTED:                  $20,357            |
-  |         TOTAL P&L :                     $22,848            |
-  |    TOTAL RETURN (4 yrs):                 112.2%            |
-  |         ANNUAL P&L:                      $5,799            |
-  |         ANNUAL ROC:                      21.0%             |
-  |          WIN RATE:                       94.9%             |
-  |        PROFIT FACTOR:                     3.63             |
+  |      CAPITAL INVESTED:                  $20,598            |
+  |         TOTAL P&L :                      $7,103            |
+  |    TOTAL RETURN (4 yrs):                 34.5%             |
+  |         ANNUAL P&L:                      $1,803            |
+  |         ANNUAL ROC:                       7.8%             |
+  |          WIN RATE:                       91.3%             |
+  |        PROFIT FACTOR:                     1.36             |
   |   TOTAL ROLLS (PUT/CALL):                 0/0              |
   +------------------------------------------------------------+
 
-2026-06-21 21:31:05.119899    Trades exported to: C:\Neeraj\backup\tech\systematicinv\iron-condor\outputs\Stock_Put_Spread_Backtest.csv
+2026-06-30 08:43:07.852507    Trades exported to: C:\Neeraj\backup\tech\systematicinv\iron-condor\outputs\Stock_Put_Spread_Backtest.csv
 
 Process finished with exit code 0
