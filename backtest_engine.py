@@ -20,7 +20,7 @@ from config import gcfg
 from base_strategy import TradeEntryReason
 from reporting import print_results, export_trades_to_csv
 from analyze_trades import all_analysis
-
+from pricing_engine import MarketDataPricingEngine
 
 def log(msg=""):
     print(f"{datetime.now()}  {msg}")
@@ -172,6 +172,7 @@ def run_backtest(start_date, delta_days, strategy, run_title):
         # Track peak concurrent for INFORMATIONAL output. Capital sizing
         max_concurrent = max(max_concurrent, len(open_trades))
 
+    MarketDataPricingEngine.save_all(strategy.cfg)
     # Force-close anything still open at end of period
     for trade in open_trades:
         md = strategy.get_market_data(trade, dates[-1])

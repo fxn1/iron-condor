@@ -21,7 +21,7 @@ from volatility import calculate_historical_volatility
 from scanner import scan
 from put_spread import create_put_spread_from_scan
 from config import gcfg
-
+from pricing_engine import MarketDataPricingEngine
 
 def log(msg=""):
     print(f"{datetime.now()}  {msg}")
@@ -135,6 +135,7 @@ class StockPutSpreadStrategy(BaseStrategy):
         ticker = signal.ticker
         volatility = self._volatility(ticker, current_date)
         expiration = get_next_friday(current_date, self.cfg.target_dte)
+        engine = MarketDataPricingEngine(signal.ticker, current_date, self.cfg)
         return create_put_spread_from_scan(
             ticker            = ticker,
             entry_date        = current_date,
@@ -145,6 +146,7 @@ class StockPutSpreadStrategy(BaseStrategy):
             volatility        = volatility,
             trade_id          = trade_id,
             cfg               = self.cfg,
+            pricing_engine    = engine,
         )
 
     def get_market_data(self, trade, ts: pd.Timestamp) -> Optional[dict]:

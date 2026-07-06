@@ -19,9 +19,10 @@ class OneSidedSpreadTrade(Trade):
         - expiration_pnl()
     """
 
-    def __init__(self, ticker, entry_date, expiration_date, spx_price_df, vix, short_strike, long_strike, credit, cfg, trade_id):
+    def __init__(self, ticker, entry_date, expiration_date, spx_price_df, vix, short_strike, long_strike, credit, cfg, trade_id, pricing_engine):
         price = float(spx_price_df.loc[entry_date, 'Close']) if entry_date in spx_price_df.index else 0.0
         volume_10med = self.volume_10median(entry_date, spx_price_df)
+        self.pricing_engine = pricing_engine
         super().__init__(ticker, entry_date, expiration_date, price, volume_10med, vix, credit, cfg, trade_id)
 
         self.short_strike = short_strike
@@ -69,8 +70,8 @@ class OneSidedSpreadTrade(Trade):
     # ============================================================
 
     def _spread_value(self, S, T, r, vol):
-        short_price = black_scholes_price(S, self.short_strike, T, r, vol, self.option_type())
-        long_price = black_scholes_price(S, self.long_strike, T, r, vol, self.option_type())
+        short_price = self.pricing_engine.option_price(S, self.short_strike, T, r, vol, self.option_type())
+        long_price = self.pricing_engine.option_price(S, self.long_strike, T, r, vol, self.option_type())
         return short_price - long_price
 
     def _spread_pnl(self, S, T, r, vol):
@@ -80,8 +81,8 @@ class OneSidedSpreadTrade(Trade):
         if not self.leg_open:
             return 0.0
 
-        short_delta = black_scholes_delta(price, self.short_strike, T, r, vol, self.option_type())
-        long_delta = black_scholes_delta(price, self.long_strike, T, r, vol, self.option_type())
+        short_delta = self.pricing_engine.option_delta(price, self.short_strike, T, r, vol, self.option_type())
+        long_delta = self.pricing_engine.option_delta(price, self.long_strike, T, r, vol, self.option_type())
         return (-short_delta + long_delta) * 100.0
 
     # ============================================================

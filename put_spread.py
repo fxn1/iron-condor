@@ -5,8 +5,8 @@ from config import gcfg
 
 class PutSpreadTrade(OneSidedSpreadTrade):
 
-    def __init__(self, ticker, entry_date, expiration_date, spx_price_df, vix, short_strike, long_strike, credit, cfg, trade_id):
-        super().__init__(ticker, entry_date, expiration_date, spx_price_df, vix, short_strike, long_strike, credit, cfg, trade_id)
+    def __init__(self, ticker, entry_date, expiration_date, spx_price_df, vix, short_strike, long_strike, credit, cfg, trade_id, pricing_engine):
+        super().__init__(ticker, entry_date, expiration_date, spx_price_df, vix, short_strike, long_strike, credit, cfg, trade_id, pricing_engine)
 
     def option_type(self):
         return 'put'
@@ -31,7 +31,7 @@ class PutSpreadTrade(OneSidedSpreadTrade):
         return self.credit
 
 
-def create_put_spread_from_scan(ticker, entry_date, expiration_date, spx_price_df, vix, short_strike, volatility, trade_id, cfg):
+def create_put_spread_from_scan(ticker, entry_date, expiration_date, spx_price_df, vix, short_strike, volatility, trade_id, cfg, pricing_engine):
     """
     Construct a PutSpreadTrade from scanner output.
     short_strike comes from scanner.scan(); long_strike derived here.
@@ -58,4 +58,5 @@ def create_put_spread_from_scan(ticker, entry_date, expiration_date, spx_price_d
         credit=credit,
         cfg=cfg,
         trade_id=trade_id,
+        pricing_engine=pricing_engine,
     )
