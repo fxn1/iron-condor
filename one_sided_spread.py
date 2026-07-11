@@ -1,7 +1,5 @@
 from abc import abstractmethod
 from trade import Trade
-from pricing import black_scholes_price
-from pricing import black_scholes_delta
 from config import gcfg
 
 
@@ -37,7 +35,8 @@ class OneSidedSpreadTrade(Trade):
         self.last_volatility = 0.30
 
     # TODO: move to common util
-    def volume_10median(self, entry_date, spx_price_df):
+    @staticmethod
+    def volume_10median(entry_date, spx_price_df):
         hist10 = spx_price_df[spx_price_df.index < entry_date].tail(10)
         return int(hist10['Volume'].median()) if len(hist10) >= 10 else 0
 
@@ -69,13 +68,13 @@ class OneSidedSpreadTrade(Trade):
     # CORE HELPERS
     # ============================================================
 
-    def _spread_value(self, S, T, r, vol):
-        short_price = self.pricing_engine.option_price(S, self.short_strike, T, r, vol, self.option_type())
-        long_price = self.pricing_engine.option_price(S, self.long_strike, T, r, vol, self.option_type())
+    def _spread_value(self, S, T, r, vol, short_mark, long_mark):
+        short_price = self.pricing_engine.option_price(S, self.short_strike, T, r, vol, self.option_type(), mark=short_mark)
+        long_price = self.pricing_engine.option_price(S, self.long_strike, T, r, vol, self.option_type(), mark=long_mark)
         return short_price - long_price
 
-    def _spread_pnl(self, S, T, r, vol):
-        return self.credit - self._spread_value(S, T, r, vol)
+    def _spread_pnl(self, S, T, r, vol, short_mark, long_mark):
+        return self.credit - self._spread_value(S, T, r, vol, short_mark, long_mark)
 
     def net_position_delta(self, price, T, r, vol):
         if not self.leg_open:
@@ -117,15 +116,15 @@ class OneSidedSpreadTrade(Trade):
         self.last_mark_date = current_date
         self.last_volatility = volatility
 
-        pnl_high = self._spread_pnl(day_high, T, r, vol)
-        pnl_low = self._spread_pnl(day_low, T, r, vol)
+        pnl_high = self._spread_pnl(day_high, T, r, vol, short_mark='high', long_mark='low')  # conservative
+        pnl_low = self._spread_pnl(day_low, T, r, vol, short_mark='high', long_mark='low')    # conservative
 
         # ── stop loss: check worst intraday price
         stop_hit = self.stop_trigger_hit(min(pnl_high, pnl_low))
 
         # ── profit target: use CLOSE only, not intraday best ─────────────
         # best_pnl = max(pnl_high, pnl_low)
-        pnl_close = self._spread_pnl(price, T, r, vol)
+        pnl_close = self._spread_pnl(price, T, r, vol, short_mark='close', long_mark='close')
         profit_target_hit = self.banked_pnl + pnl_close >= self.profit_target_amount
 
         if stop_hit and profit_target_hit:
@@ -154,5 +153,5 @@ class OneSidedSpreadTrade(Trade):
             return
         dte = max((self.expiration_date - self.last_mark_date).days, 0)
         T = max(dte / 365.0, 0.001)
-        pnl = self._spread_pnl(price, T, gcfg.market.risk_free_rate, self.last_volatility)
+        pnl = self._spread_pnl(price, T, gcfg.market.risk_free_rate, self.last_volatility, short_mark='close', long_mark='close')
         self._close_trade(pnl, "End of Backtest", self.last_mark_date, price)

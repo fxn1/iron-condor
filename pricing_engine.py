@@ -11,12 +11,12 @@ Black-Scholes is always used for delta and strike_for_delta (no delta in flat fi
 
 Usage:
     engine = MarketDataPricingEngine(ticker='AAPL', current_date=date, cfg=gcfg)
-    price  = engine.option_price(S, K, T, r, sigma, 'put')
-    delta  = engine.option_delta(S, K, T, r, sigma, 'put')
-    strike = engine.strike_for_delta(S, target_delta, T, r, sigma, 'put')
+    price  = engine.option_price(S, K, T, r, sigma, 'put', 'close')
+    delta  = engine.option_delta(S, K, T, r, sigma, 'put', 'close')
+    strike = engine.strike_for_delta(S, target_delta, T, r, sigma, 'put', 'close')
 
     # at end of each trading date in the backtest loop:
-    MarketDataPricingEngine.flush_synthetic(current_date, gcfg)
+    MarketDataPricingEngine.save_all(gcfg)
 """
 
 import gzip
@@ -37,11 +37,11 @@ class MarketDataPricingEngine:
 
     Two class-level caches:
         _day_cache   : {date -> DataFrame | None}  — parsed .gz for that date
-        _synth_buffer: {date -> [row_dicts]}        — BS-fallback rows, flushed at end of date
+        _synth_buffer: {date -> {occ_ticker -> row_dict}}        — BS-fallback rows, flushed at end of date
     """
 
     _day_cache    = {}   # {date: DataFrame | None}
-    _synth_buffer = {}   # {date: [row_dicts]}
+    _synth_buffer = {}   # {date: {occ_ticker: row_dict}}
     _file_changed = {}  # {date: bool}
 
     def __init__(self, ticker: str, current_date, cfg):
@@ -52,20 +52,20 @@ class MarketDataPricingEngine:
 
     # ── public interface ─────────────────────────────────────────────────────
 
-    def option_price(self, S, K, T, r, sigma, option_type='call') -> float:
+    def option_price(self, S, K, T, r, sigma, option_type, mark) -> float:
         """Return real close price from flat file, or BS fallback (buffered for flush)."""
-        price = self._lookup(K, T, option_type)
+        price = self._lookup(K, T, option_type, mark)
         if price is not None:
             return price
         bs_price = black_scholes_price(S, K, T, r, sigma, option_type)
-        self._buffer_synthetic(K, T, option_type, bs_price)
+        self._buffer_synthetic(K, T, option_type, mark, bs_price)
         return bs_price
 
-    def option_delta(self, S, K, T, r, sigma, option_type='call') -> float:
+    def option_delta(self, S, K, T, r, sigma, option_type) -> float:
         """Always Black-Scholes — flat files carry no delta column."""
         return black_scholes_delta(S, K, T, r, sigma, option_type)
 
-    def strike_for_delta(self, S, target_delta, T, r, sigma, option_type='put') -> float:
+    def strike_for_delta(self, S, target_delta, T, r, sigma, option_type) -> float:
         """Always Black-Scholes — pre-trade calculation, no file to look up."""
         return find_strike_for_delta(S, target_delta, T, r, sigma, option_type)
 
@@ -79,14 +79,17 @@ class MarketDataPricingEngine:
         for d, changed in cls._file_changed.items():
             if not changed:
                 continue
-            rows = cls._synth_buffer.get(d, [])
-            if not rows:
+            rows_by_ticker  = cls._synth_buffer.get(d, {})
+            if not rows_by_ticker:
                 continue
+            rows = list(rows_by_ticker.values())
             path = _file_path(d, Path(cfg.options_data_path))
             path.parent.mkdir(parents=True, exist_ok=True)
             df = pd.DataFrame(rows, columns=['ticker', 'volume', 'open', 'close', 'high', 'low', 'window_start', 'transactions'])
             with gzip.open(path, 'wt') as f:
                 df.to_csv(f, index=False)
+            cls._file_changed[d] = False
+            cls._synth_buffer[d] = rows_by_ticker
 
     # ── internal ─────────────────────────────────────────────────────────────
 
@@ -94,17 +97,25 @@ class MarketDataPricingEngine:
         if self.date in self.__class__._day_cache:  # Equivalent to writing MarketDataPricingEngine._day_cache.get(self.date). Used instead of the class name directly so subclasses would still work.
             return
         path = _file_path(self.date, self.data_path)
-        if path.exists()
+        if path.exists():
             # load raw rows into synth_buffer, day_cache
             with gzip.open(path, 'rt') as f:
                 raw_df = pd.read_csv(f)  # read once
-            self.__class__._synth_buffer[self.date] = raw_df.to_dict('records')
+            rows = raw_df.to_dict('records')
+            self.__class__._synth_buffer[self.date] = {
+                row['ticker']: row for row in rows
+            }
             self.__class__._day_cache[self.date] = _parse_raw(raw_df, "America/New_York")  # parse in memory
             self.__class__._file_changed[self.date] = False
         else:
             self.__class__._day_cache[self.date] = None
+            self.__class__._synth_buffer[self.date] = {}
+            self.__class__._file_changed[self.date] = False
 
-    def _lookup(self, K, T, option_type) -> float | None:
+    def _lookup(self, K, T, option_type, mark):
+        if mark not in {'open', 'high', 'low', 'close'}:
+            raise ValueError(f"Unsupported option mark: {mark}")
+
         df = self.__class__._day_cache.get(self.date)
         if df is None:
             return None
@@ -132,9 +143,9 @@ class MarketDataPricingEngine:
         # if even the closest is more than 3 days away, no usable match
         if best['exp_diff'] > 3:
             return None  # no close-enough expiration
-        return float(best['close'])
+        return float(best[mark])
 
-    def _buffer_synthetic(self, K, T, option_type, price):
+    def _buffer_synthetic(self, K, T, option_type, mark, price):
         exp_date  = (pd.Timestamp(self.date) + pd.Timedelta(days=round(T * 365))).date()
         yymmdd    = exp_date.strftime('%y%m%d')
         cp        = 'C' if option_type == 'call' else 'P'
@@ -152,9 +163,21 @@ class MarketDataPricingEngine:
             'transactions': 0,
         }
         if self.date not in self.__class__._synth_buffer:
-            self.__class__._synth_buffer[self.date] = []  # create empty list
-        self.__class__._synth_buffer[self.date].append(row)  # then append
-        self.__class__._file_changed[self.date] = True  # ← add this
+            self.__class__._synth_buffer[self.date] = {}
+        rows_by_ticker = self.__class__._synth_buffer.setdefault(self.date, {})
+
+        if occ not in rows_by_ticker:
+            rows_by_ticker[occ] = row
+        else:
+            existing = rows_by_ticker[occ]
+            if mark == 'high':
+                existing['high'] = max(float(existing['high']), price)
+            elif mark == 'low':
+                existing['low'] = min(float(existing['low']), price)
+            else:
+                existing[mark] = price
+
+        self.__class__._file_changed[self.date] = True
 
 
 # ── file path helper (reused by engine + flush) ───────────────────────────────

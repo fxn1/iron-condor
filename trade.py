@@ -168,7 +168,7 @@ class IronCondorTrade(Trade):
             return False
         # Realised PnL on the closing spread
         ps = black_scholes_price(spx_price, self.put_short, T, r, put_vol, 'put')
-        pl = black_scholes_price(spx_price, self.put_long,  T, r, put_vol, 'put')
+        pl = black_scholes_price(spx_price, self.put_long, T, r, put_vol, 'put')
         realised = self.put_credit - (ps - pl)
         self.put_rolls.append({
             'roll_date': current_date,
