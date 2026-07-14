@@ -42,6 +42,7 @@ class StockPutSpreadStrategy(BaseStrategy):
         self.cfg             = gcfg.stocks
         self.price_data      = {}
         self.earnings_cache  = None
+        self.pricing_engine = None
         self.sorted_dates     = {}    # {ticker: [sorted list of dates in price_data]}
 
     # ── BaseStrategy: ───────────────────
@@ -68,6 +69,8 @@ class StockPutSpreadStrategy(BaseStrategy):
         self.hist.universe_as_of(start_date)
         sp500_list = self.hist.current_tickers
         log(f"Current tickers: {len(sp500_list)}")
+
+        self.pricing_engine = MarketDataPricingEngine(self.cfg)  # once per run
 
         log(f" Loading stock price data from {start_date.date()}, delta_days={delta_days} for {len(sp500_list)} tickers...")
         cache = CachedailyOHLCV(path=gcfg.paths.yf_data_path, start_date=start_date, delta_days=delta_days)
@@ -135,7 +138,6 @@ class StockPutSpreadStrategy(BaseStrategy):
         ticker = signal.ticker
         volatility = self._volatility(ticker, current_date)
         expiration = get_next_friday(current_date, self.cfg.target_dte)
-        engine = MarketDataPricingEngine(signal.ticker, current_date, self.cfg)
         return create_put_spread_from_scan(
             ticker            = ticker,
             entry_date        = current_date,
@@ -146,7 +148,7 @@ class StockPutSpreadStrategy(BaseStrategy):
             volatility        = volatility,
             trade_id          = trade_id,
             cfg               = self.cfg,
-            pricing_engine    = engine,
+            pricing_engine    = self.pricing_engine,
         )
 
     def get_market_data(self, trade, ts: pd.Timestamp) -> Optional[dict]:

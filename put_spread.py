@@ -42,8 +42,8 @@ def create_put_spread_from_scan(ticker, entry_date, expiration_date, spx_price_d
 
     # print(f"create_put_spread_from_scan: spx_price={spx_price}, short_strike={short_strike}, long_strike={long_strike}. wing_width={wing_width}, T={T:.4f}, dte={dte}, r={gcfg.market.risk_free_rate:.4f}, sigma={vol:.4f}, put")
     spx_price = float(spx_price_df.loc[entry_date, 'Close']) if entry_date in spx_price_df.index else 0.0
-    ps = pricing_engine.option_price(spx_price, short_strike, T, gcfg.market.risk_free_rate, vol, 'put', 'close')
-    pl = pricing_engine.option_price(spx_price, long_strike, T, gcfg.market.risk_free_rate, vol, 'put', 'close')
+    ps = pricing_engine.option_price(ticker, entry_date, spx_price, short_strike, T, gcfg.market.risk_free_rate, vol, 'put', 'close')
+    pl = pricing_engine.option_price(ticker, entry_date, spx_price, long_strike, T, gcfg.market.risk_free_rate, vol, 'put', 'close')
 
     credit = ps - pl
 

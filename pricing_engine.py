@@ -11,9 +11,9 @@ Black-Scholes is always used for delta and strike_for_delta (no delta in flat fi
 
 Usage:
     engine = MarketDataPricingEngine(ticker='AAPL', current_date=date, cfg=gcfg)
-    price  = engine.option_price(S, K, T, r, sigma, 'put', 'close')
-    delta  = engine.option_delta(S, K, T, r, sigma, 'put', 'close')
-    strike = engine.strike_for_delta(S, target_delta, T, r, sigma, 'put', 'close')
+    price  = engine.option_price(ticker, current_date, S, K, T, r, sigma, 'put', 'close')
+    delta  = engine.option_delta(ticker, current_date, S, K, T, r, sigma, 'put', 'close')
+    strike = engine.strike_for_delta(ticker, current_date, S, target_delta, T, r, sigma, 'put', 'close')
 
     # at end of each trading date in the backtest loop:
     MarketDataPricingEngine.save_all(gcfg)
@@ -44,21 +44,20 @@ class MarketDataPricingEngine:
     _synth_buffer = {}   # {date: {occ_ticker: row_dict}}
     _file_changed = {}  # {date: bool}
 
-    def __init__(self, ticker: str, current_date, cfg):
-        self.ticker      = ticker.upper()
-        self.date        = pd.Timestamp(current_date).date()
+    def __init__(self, cfg):
         self.data_path   = Path(cfg.options_data_path)
-        self._ensure_loaded()
 
     # ── public interface ─────────────────────────────────────────────────────
 
-    def option_price(self, S, K, T, r, sigma, option_type, mark) -> float:
+    def option_price(self, ticker, current_date, S, K, T, r, sigma, option_type, mark) -> float:
         """Return real close price from flat file, or BS fallback (buffered for flush)."""
-        price = self._lookup(K, T, option_type, mark)
+        date = pd.Timestamp(current_date).date()
+        self._ensure_loaded(date)
+        price = self._lookup(ticker.upper(), current_date, K, T, option_type, mark)
         if price is not None:
             return price
         bs_price = black_scholes_price(S, K, T, r, sigma, option_type)
-        self._buffer_synthetic(K, T, option_type, mark, bs_price)
+        self._buffer_synthetic(ticker, current_date, K, T, option_type, mark, bs_price)
         return bs_price
 
     def option_delta(self, S, K, T, r, sigma, option_type) -> float:
@@ -93,38 +92,38 @@ class MarketDataPricingEngine:
 
     # ── internal ─────────────────────────────────────────────────────────────
 
-    def _ensure_loaded(self):
-        if self.date in self.__class__._day_cache:  # Equivalent to writing MarketDataPricingEngine._day_cache.get(self.date). Used instead of the class name directly so subclasses would still work.
+    def _ensure_loaded(self, date):
+        if date in self.__class__._day_cache:  # Equivalent to writing MarketDataPricingEngine._day_cache.get(date). Used instead of the class name directly so subclasses would still work.
             return
-        path = _file_path(self.date, self.data_path)
+        path = _file_path(date, self.data_path)
         if path.exists():
             # load raw rows into synth_buffer, day_cache
             with gzip.open(path, 'rt') as f:
                 raw_df = pd.read_csv(f)  # read once
             rows = raw_df.to_dict('records')
-            self.__class__._synth_buffer[self.date] = {
+            self.__class__._synth_buffer[date] = {
                 row['ticker']: row for row in rows
             }
-            self.__class__._day_cache[self.date] = _parse_raw(raw_df, "America/New_York")  # parse in memory
-            self.__class__._file_changed[self.date] = False
+            self.__class__._day_cache[date] = _parse_raw(raw_df, "America/New_York")  # parse in memory
+            self.__class__._file_changed[date] = False
         else:
-            self.__class__._day_cache[self.date] = None
-            self.__class__._synth_buffer[self.date] = {}
-            self.__class__._file_changed[self.date] = False
+            self.__class__._day_cache[date] = None
+            self.__class__._synth_buffer[date] = {}
+            self.__class__._file_changed[date] = False
 
-    def _lookup(self, K, T, option_type, mark):
+    def _lookup(self, ticker, current_date, K, T, option_type, mark):
         if mark not in {'open', 'high', 'low', 'close'}:
             raise ValueError(f"Unsupported option mark: {mark}")
 
-        df = self.__class__._day_cache.get(self.date)
+        df = self.__class__._day_cache.get(current_date)
         if df is None:
             return None
         # T is time-to-expiration in years (that's what Black-Scholes uses — e.g. 63 days = 0.1726 years). This converts it back to an actual calendar date
-        target_exp = (pd.Timestamp(self.date) + pd.Timedelta(days=round(T * 365))).date()
+        target_exp = (pd.Timestamp(current_date) + pd.Timedelta(days=round(T * 365))).date()
 
         # match underlying, option_type, strike; find closest expiration within ±3 days
         mask = (
-            (df['underlying'] == self.ticker) &
+            (df['underlying'] == ticker) &
             (df['option_type'] == option_type) &
             (df['strike']     == K)
         )
@@ -145,12 +144,12 @@ class MarketDataPricingEngine:
             return None  # no close-enough expiration
         return float(best[mark])
 
-    def _buffer_synthetic(self, K, T, option_type, mark, price):
-        exp_date  = (pd.Timestamp(self.date) + pd.Timedelta(days=round(T * 365))).date()
+    def _buffer_synthetic(self, ticker, current_date, K, T, option_type, mark, price):
+        exp_date  = (pd.Timestamp(current_date) + pd.Timedelta(days=round(T * 365))).date()
         yymmdd    = exp_date.strftime('%y%m%d')
         cp        = 'C' if option_type == 'call' else 'P'
-        occ       = f"O:{self.ticker}{yymmdd}{cp}{int(K * 1000):08d}"
-        win_start = int(pd.Timestamp(self.date, tz='UTC').value)  # nanoseconds
+        occ       = f"O:{ticker}{yymmdd}{cp}{int(K * 1000):08d}"
+        win_start = int(pd.Timestamp(current_date, tz='UTC').value)  # nanoseconds
 
         row = {
             'ticker':       occ,
@@ -162,9 +161,9 @@ class MarketDataPricingEngine:
             'window_start': win_start,
             'transactions': 0,
         }
-        if self.date not in self.__class__._synth_buffer:
-            self.__class__._synth_buffer[self.date] = {}
-        rows_by_ticker = self.__class__._synth_buffer.setdefault(self.date, {})
+        if current_date not in self.__class__._synth_buffer:
+            self.__class__._synth_buffer[current_date] = {}
+        rows_by_ticker = self.__class__._synth_buffer.setdefault(current_date, {})
 
         if occ not in rows_by_ticker:
             rows_by_ticker[occ] = row
@@ -177,7 +176,7 @@ class MarketDataPricingEngine:
             else:
                 existing[mark] = price
 
-        self.__class__._file_changed[self.date] = True
+        self.__class__._file_changed[current_date] = True
 
 
 # ── file path helper (reused by engine + flush) ───────────────────────────────

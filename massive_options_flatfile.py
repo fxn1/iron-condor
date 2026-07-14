@@ -38,7 +38,7 @@ def parse_occ_ticker(ticker: str) -> dict:
     }
 
 
-def read_flatfile(path: str | Path, tz: str = "America/New_York") -> pd.DataFrame:
+def read_flatfile(path: str, tz: str = "America/New_York") -> pd.DataFrame:
     """
     Read a single day_aggs_v1 or minute_aggs_v1 .csv.gz file into a DataFrame,
     with the OCC ticker decoded into underlying/expiration/option_type/strike columns
@@ -62,6 +62,7 @@ def _parse_raw(df: pd.DataFrame, tz: str) -> pd.DataFrame:
             "transactions", "ticker", ]
     return df[cols].sort_values(["underlying", "expiration", "strike", "timestamp"]).reset_index(drop=True)
 
+
 def read_flatfiles(paths, tz: str = "America/New_York") -> pd.DataFrame:
     """Read and concatenate multiple flat files (e.g. a date range) into one DataFrame."""
     frames = [read_flatfile(p, tz=tz) for p in paths]
@@ -80,9 +81,9 @@ if __name__ == "__main__":
         print("Usage: python massive_options_flatfile.py <path-to-csv.gz> [UNDERLYING]")
         sys.exit(1)
 
-    df = read_flatfile(sys.argv[1])
+    df1 = read_flatfile(sys.argv[1])
     if len(sys.argv) > 2:
-        df = filter_underlying(df, sys.argv[2])
+        df1 = filter_underlying(df1, sys.argv[2])
 
-    print(df.head(20).to_string(index=False))
-    print(f"\n{len(df):,} rows, {df['underlying'].nunique()} underlyings")
+    print(df1.head(20).to_string(index=False))
+    print(f"\n{len(df1):,} rows, {df1['underlying'].nunique()} underlyings")
